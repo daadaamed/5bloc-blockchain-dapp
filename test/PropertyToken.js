@@ -161,4 +161,32 @@ describe("PropertyToken Contract", function () {
       );
     });
   });
+  describe("rewardTransaction", function () {
+    beforeEach(async function () {
+      // Mint a Residential property
+      await propertyToken.mintProperty(
+        "House",
+        "Residential",
+        100,
+        "ipfs://res"
+      );
+      // Advance time to bypass lock
+      await ethers.provider.send("evm_increaseTime", [600]);
+      await ethers.provider.send("evm_mine");
+    });
+
+    it("should convert Residential to Commercial with 1.2x value", async function () {
+      await propertyToken.rewardTransaction(0, "Commercial");
+      const prop = await propertyToken.properties(0);
+      expect(prop.propertyType).to.equal("Commercial");
+      expect(prop.value).to.equal(120);
+    });
+
+    it("should enforce cooldown after reward transaction", async function () {
+      await propertyToken.rewardTransaction(0, "Commercial");
+      await expect(
+        propertyToken.rewardTransaction(0, "Luxury")
+      ).to.be.revertedWith("Cooldown active");
+    });
+  });
 });

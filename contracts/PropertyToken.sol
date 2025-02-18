@@ -51,6 +51,15 @@ contract PropertyToken {
         address indexed newOwner,
         uint256 timestamp
     );
+    
+    event RewardTransactionExecuted(
+        uint256 indexed propertyId,
+        string oldType,
+        string newType,
+        uint256 oldValue,
+        uint256 newValue,
+        uint256 timestamp
+    );
 
     /**
      * @dev Mint a new property token with metadata.
@@ -160,5 +169,58 @@ contract PropertyToken {
 
         // Emit event for the property exchange
         emit PropertyExchanged(_propertyId, msg.sender, _receiver, block.timestamp);
+    }
+    
+    /**
+     * @dev Reward transaction to convert property types with specific multipliers.
+     * Conversion rules:
+     *  - Residential -> Commercial: multiplier 1.2
+     *  - Commercial -> Luxury: multiplier 1.5
+     *  - Residential -> Luxury: multiplier 1.8
+     * Any other conversion is not allowed.
+     */
+    function rewardTransaction(uint256 _propertyId, string memory _newType) public {
+        Property storage property = properties[_propertyId];
+        require(block.timestamp >= nextAllowedTxTime[msg.sender], "Cooldown active");
+        require(property.owner == msg.sender, "NotOwner: Only the property owner can perform reward transactions.");
+        
+        string memory currentType = property.propertyType;
+        uint256 newValue;
+        bool validConversion = false;
+        
+        // Convert using keccak256 for string comparison
+        if (
+            keccak256(bytes(currentType)) == keccak256(bytes("Residential")) &&
+            keccak256(bytes(_newType)) == keccak256(bytes("Commercial"))
+        ) {
+            newValue = (property.value * 120) / 100;
+            validConversion = true;
+        } else if (
+            keccak256(bytes(currentType)) == keccak256(bytes("Commercial")) &&
+            keccak256(bytes(_newType)) == keccak256(bytes("Luxury"))
+        ) {
+            newValue = (property.value * 150) / 100;
+            validConversion = true;
+        } else if (
+            keccak256(bytes(currentType)) == keccak256(bytes("Residential")) &&
+            keccak256(bytes(_newType)) == keccak256(bytes("Luxury"))
+        ) {
+            newValue = (property.value * 180) / 100;
+            validConversion = true;
+        }
+
+        nextAllowedTxTime[msg.sender] = block.timestamp + COOLDOWN_PERIOD;
+        
+        require(validConversion, "Conversion not allowed between these property types");
+        
+        uint256 oldValue = property.value;
+        string memory oldType = property.propertyType;
+        
+        // Update the property's type and value
+        property.propertyType = _newType;
+        property.value = newValue;
+        
+        // Emit event for the reward transaction
+        emit RewardTransactionExecuted(_propertyId, oldType, _newType, oldValue, newValue, block.timestamp);
     }
 }
