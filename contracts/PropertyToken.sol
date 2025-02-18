@@ -34,6 +34,9 @@ contract PropertyToken {
     // Mapping to record the next allowed transaction timestamp per user
     mapping(address => uint256) public nextAllowedTxTime;
 
+    // Mapping to record the last transaction timestamp per user (similar to Solana's last_transaction)
+    mapping(address => uint256) public lastTransaction;
+
     // Events
     event PropertyMinted(
         uint256 indexed propertyId,
@@ -106,6 +109,9 @@ contract PropertyToken {
         // Record ownership
         ownerProperties[msg.sender].push(propertyId);
 
+        // Update the user's last transaction time
+        lastTransaction[msg.sender] = currentTime;
+
         // Set lock: after minting, user is locked for 10 minutes.
         nextAllowedTxTime[msg.sender] = currentTime + LOCK_PERIOD;
 
@@ -166,6 +172,10 @@ contract PropertyToken {
         // Update cooldowns for both sender and receiver
         nextAllowedTxTime[msg.sender] = block.timestamp + COOLDOWN_PERIOD;
         nextAllowedTxTime[_receiver] = block.timestamp + COOLDOWN_PERIOD;
+
+        // Update last transaction timestamps for both parties
+        lastTransaction[msg.sender] = block.timestamp;
+        lastTransaction[_receiver] = block.timestamp;
 
         // Emit event for the property exchange
         emit PropertyExchanged(_propertyId, msg.sender, _receiver, block.timestamp);
