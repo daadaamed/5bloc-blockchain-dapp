@@ -34,6 +34,11 @@ pub mod propertytoken {
             return Err(ErrorCode::MaxPropertiesReached.into());
         }
 
+        // Enforce cooldown on minting.
+        if clock - user_account.last_transaction < COOLDOWN_PERIOD {
+            return Err(ErrorCode::NormalCooldownActive.into());
+        }
+
         // initialise le compte de propriété
         let property_account = &mut ctx.accounts.property;
         property_account.owner = ctx.accounts.user_signer.key();
@@ -58,9 +63,19 @@ pub mod propertytoken {
         let receiver = &mut ctx.accounts.receiver;
         let property_account = &mut ctx.accounts.property;
 
+        // Only allow the property owner to initiate a transfer.
+        if property_account.owner != ctx.accounts.sender_signer.key() {
+            return Err(ErrorCode::NotOwner.into());
+        }
+
         // vérifie que le destinataire ne dépasse pas la limite de propriétés
         if receiver.properties.len() >= 4 {
             return Err(ErrorCode::MaxPropertiesReached.into());
+        }
+
+        // Check that the receiver is not in cooldown.
+        if clock - receiver.last_transaction < COOLDOWN_PERIOD {
+            return Err(ErrorCode::NormalCooldownActive.into());
         }
 
         // Extract property public key.
@@ -81,6 +96,46 @@ pub mod propertytoken {
         // Update transaction timestamps.
         sender.last_transaction = clock;
         receiver.last_transaction = clock;
+
+        Ok(())
+    }
+
+    // upgrade a property to a higher category based on conversion multipliers
+    pub fn upgrade_property(ctx: Context<UpgradeProperty>, new_property_type: String) -> Result<()> {
+        let clock = Clock::get()?.unix_timestamp;
+        let user_account = &mut ctx.accounts.user;
+        let property_account = &mut ctx.accounts.property;
+
+        // Enforce cooldown on upgrade transactions.
+        if clock - user_account.last_transaction < COOLDOWN_PERIOD {
+            return Err(ErrorCode::NormalCooldownActive.into());
+        }
+
+        // Only allow the owner to upgrade.
+        if property_account.owner != ctx.accounts.user_signer.key() {
+            return Err(ErrorCode::NotOwner.into());
+        }
+
+        // Get the current property type and value.
+        let current_type = property_account.metadata.property_type.clone();
+        let current_value = property_account.metadata.value;
+        let multiplier: f64 = if current_type == "Residential" && new_property_type == "Commercial" {
+            1.2
+        } else if current_type == "Commercial" && new_property_type == "Luxury" {
+            1.5
+        } else if current_type == "Residential" && new_property_type == "Luxury" {
+            1.8
+        } else {
+            return Err(ErrorCode::InvalidUpgradeConversion.into());
+        };
+
+        // Update property details: new type and increased value.
+        property_account.metadata.property_type = new_property_type;
+        property_account.metadata.value = ((current_value as f64) * multiplier) as u64;
+        property_account.last_transfer_at = clock;
+
+        // Update the user's transaction timestamp.
+        user_account.last_transaction = clock;
 
         Ok(())
     }
@@ -118,6 +173,17 @@ pub struct ExchangeProperty<'info> {
     pub sender_signer: Signer<'info>,
     #[account(mut)]
     pub receiver_signer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct UpgradeProperty<'info> {
+    #[account(mut)]
+    pub user: Account<'info, User>,
+    #[account(mut)]
+    pub property: Account<'info, Property>,
+    #[account(mut)]
+    pub user_signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
