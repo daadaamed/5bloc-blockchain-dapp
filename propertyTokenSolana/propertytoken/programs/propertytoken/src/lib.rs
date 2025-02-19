@@ -2,6 +2,10 @@ use anchor_lang::prelude::*;
 
 declare_id!("DWfqXY9yuAEkU7MK2tcWxNGFqtuQyc2GMN64AmDebv8g");
 
+const IPFS_HASH_RESIDENTIAL: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";
+const IPFS_HASH_COMMERCIAL: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";  
+const IPFS_HASH_LUXIRIOUS: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";    
+
 #[cfg(feature = "test-mode")]
 const COOLDOWN_PERIOD: i64 = 2; // 2 seconds for testing
 #[cfg(feature = "test-mode")]
@@ -16,7 +20,7 @@ const LOCK_PERIOD: i64 = 600; // 10 minutes for production
 pub mod propertytoken {
     use super::*;
 
-    // initialise un nouveau compte utilisateur
+    // Initialise un nouveau compte utilisateur.
     pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()> {
         let user_account = &mut ctx.accounts.user;
         user_account.properties = Vec::new();
@@ -24,22 +28,40 @@ pub mod propertytoken {
         Ok(())
     }
 
-    // crée un nouveau token de propriété
+    // Crée un nouveau token de propriété avec une vérification basique d'IPFS.
     pub fn mint_property(ctx: Context<MintProperty>, metadata: Metadata) -> Result<()> {
         let clock = Clock::get()?.unix_timestamp;
         let user_account = &mut ctx.accounts.user;
 
-        // vérifie la limite maximale de propriétés (4 propriétés maximum)
+        // Vérifie la limite maximale de propriétés (4 propriétés maximum).
         if user_account.properties.len() >= 4 {
             return Err(ErrorCode::MaxPropertiesReached.into());
         }
 
-        // Enforce cooldown on minting.
-        if clock - user_account.last_transaction < COOLDOWN_PERIOD {
-            return Err(ErrorCode::NormalCooldownActive.into());
+        // Vérification  de l'IPFS hash pour valider le type de propriété.
+        if metadata.ipfs_hash == IPFS_HASH_RESIDENTIAL {
+            if metadata.property_type != "residential" {
+                msg!("Warning: The provided IPFS hash indicates a residential property, but the property type is '{}'.", metadata.property_type);
+            } else {
+                msg!("Residential property IPFS hash verified.");
+            }
+        } else if metadata.ipfs_hash == IPFS_HASH_COMMERCIAL {
+            if metadata.property_type != "commercial" {
+                msg!("Warning: The provided IPFS hash indicates a commercial property, but the property type is '{}'.", metadata.property_type);
+            } else {
+                msg!("Commercial property IPFS hash verified.");
+            }
+        } else if metadata.ipfs_hash == IPFS_HASH_LUXIRIOUS {
+            if metadata.property_type != "luxirious" {
+                msg!("Warning: The provided IPFS hash indicates an luxirious property, but the property type is '{}'.", metadata.property_type);
+            } else {
+                msg!("luxirious property IPFS hash verified.");
+            }
+        } else {
+            msg!("IPFS hash does not match any predefined type. Proceeding without type-specific verification.");
         }
 
-        // initialise le compte de propriété
+        // Initialise le compte de propriété.
         let property_account = &mut ctx.accounts.property;
         property_account.owner = ctx.accounts.user_signer.key();
         property_account.metadata = metadata.clone();
@@ -47,96 +69,73 @@ pub mod propertytoken {
         property_account.last_transfer_at = clock;
         property_account.previous_owners = Vec::new();
 
-        // Add the property to the user's list.
+        // Ajoute la propriété à la liste du propriétaire.
         user_account.properties.push(property_account.key());
 
-        // Update the user's transaction timestamps.
+        // Met à jour le timestamp de la dernière transaction de l'utilisateur.
         user_account.last_transaction = clock;
 
         Ok(())
     }
 
-    // échange une propriété entre l'expéditeur et le destinataire
+    // Échange une propriété entre l'expéditeur et le destinataire.
     pub fn exchange_property(ctx: Context<ExchangeProperty>) -> Result<()> {
         let clock = Clock::get()?.unix_timestamp;
         let sender = &mut ctx.accounts.sender;
         let receiver = &mut ctx.accounts.receiver;
         let property_account = &mut ctx.accounts.property;
 
-        // Only allow the property owner to initiate a transfer.
-        if property_account.owner != ctx.accounts.sender_signer.key() {
-            return Err(ErrorCode::NotOwner.into());
-        }
-
-        // vérifie que le destinataire ne dépasse pas la limite de propriétés
+        // Vérifie que le destinataire ne dépasse pas la limite de propriétés.
         if receiver.properties.len() >= 4 {
             return Err(ErrorCode::MaxPropertiesReached.into());
         }
 
-        // Check that the receiver is not in cooldown.
-        if clock - receiver.last_transaction < COOLDOWN_PERIOD {
-            return Err(ErrorCode::NormalCooldownActive.into());
-        }
-
-        // Extract property public key.
+        // Extrait la clé publique de la propriété.
         let property_pubkey = property_account.key();
 
-        // Save current owner into a local variable.
+        // Sauvegarde le propriétaire actuel.
         let current_owner = property_account.owner;
 
-        // Update property details.
+        // Met à jour les détails de la propriété.
         property_account.previous_owners.push(current_owner);
         property_account.owner = ctx.accounts.receiver_signer.key();
         property_account.last_transfer_at = clock;
 
-        // Update the sender's and receiver's property lists.
+        // Met à jour les listes de propriétés des utilisateurs.
         sender.properties.retain(|&x| x != property_pubkey);
         receiver.properties.push(property_pubkey);
 
-        // Update transaction timestamps.
+        // Met à jour les timestamps des transactions.
         sender.last_transaction = clock;
         receiver.last_transaction = clock;
 
         Ok(())
     }
 
-    // upgrade a property to a higher category based on conversion multipliers
-    pub fn upgrade_property(ctx: Context<UpgradeProperty>, new_property_type: String) -> Result<()> {
-        let clock = Clock::get()?.unix_timestamp;
-        let user_account = &mut ctx.accounts.user;
-        let property_account = &mut ctx.accounts.property;
-
-        // Enforce cooldown on upgrade transactions.
-        if clock - user_account.last_transaction < COOLDOWN_PERIOD {
-            return Err(ErrorCode::NormalCooldownActive.into());
-        }
-
-        // Only allow the owner to upgrade.
-        if property_account.owner != ctx.accounts.user_signer.key() {
-            return Err(ErrorCode::NotOwner.into());
-        }
-
-        // Get the current property type and value.
-        let current_type = property_account.metadata.property_type.clone();
-        let current_value = property_account.metadata.value;
-        let multiplier: f64 = if current_type == "Residential" && new_property_type == "Commercial" {
-            1.2
-        } else if current_type == "Commercial" && new_property_type == "Luxury" {
-            1.5
-        } else if current_type == "Residential" && new_property_type == "Luxury" {
-            1.8
+    // Nouvelle fonction: Vérifie la validité des métadonnées de propriété.
+    pub fn verify_property_metadata(ctx: Context<VerifyPropertyMetadata>, metadata: Metadata) -> Result<()> {
+        // Vérification de l'IPFS hash et du type associé.
+        if metadata.ipfs_hash == IPFS_HASH_RESIDENTIAL {
+            if metadata.property_type != "residential" {
+                msg!("Verification failed: IPFS hash for residential does not match property type: {}", metadata.property_type);
+            } else {
+                msg!("Verification succeeded: Residential property metadata is valid.");
+            }
+        } else if metadata.ipfs_hash == IPFS_HASH_COMMERCIAL {
+            if metadata.property_type != "commercial" {
+                msg!("Verification failed: IPFS hash for commercial does not match property type: {}", metadata.property_type);
+            } else {
+                msg!("Verification succeeded: Commercial property metadata is valid.");
+            }
+        } else if metadata.ipfs_hash == IPFS_HASH_LUXIRIOUS {
+            if metadata.property_type != "LIPFS_HASH_LUXIRIOUS" {
+                msg!("Verification failed: IPFS hash for LIPFS_HASH_LUXIRIOUS does not match property type: {}", metadata.property_type);
+            } else {
+                msg!("Verification succeeded: LIPFS_HASH_LUXIRIOUS property metadata is valid.");
+            }
         } else {
-            return Err(ErrorCode::InvalidUpgradeConversion.into());
-        };
-
-        // Update property details: new type and increased value.
-        property_account.metadata.property_type = new_property_type;
-        property_account.metadata.value = ((current_value as f64) * multiplier) as u64;
-        property_account.last_transfer_at = clock;
-
-        // Update the user's transaction timestamp.
-        user_account.last_transaction = clock;
-
+            msg!("Verification warning: IPFS hash not recognized. Unable to verify property metadata.");
+        }
         Ok(())
     }
 }
@@ -176,15 +175,11 @@ pub struct ExchangeProperty<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Pour la fonction de vérification des métadonnées, on nécessite une signature pour autoriser la vérification.
 #[derive(Accounts)]
-pub struct UpgradeProperty<'info> {
-    #[account(mut)]
-    pub user: Account<'info, User>,
-    #[account(mut)]
-    pub property: Account<'info, Property>,
+pub struct VerifyPropertyMetadata<'info> {
     #[account(mut)]
     pub user_signer: Signer<'info>,
-    pub system_program: Program<'info, System>,
 }
 
 #[account]
@@ -195,7 +190,7 @@ pub struct User {
 }
 
 impl User {
-    // Estimated size (adjust if needed)
+    // Taille estimée (ajuster si nécessaire).
     const SIZE: usize = 4 + (4 + 4 * 32) + 8 + 1;
 }
 
@@ -212,7 +207,7 @@ impl Property {
     const SIZE: usize = 32 + Metadata::SIZE + 8 + 8 + 4 + (10 * 32);
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct Metadata {
     pub name: String,
     pub property_type: String,
