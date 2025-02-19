@@ -166,4 +166,8 @@ pub enum ErrorCode {
     NormalCooldownActive,
     #[msg("Must wait for penalty cooldown period (10 minutes) to elapse.")]
     PenaltyCooldownActivated,
+    #[msg("Only the property owner can perform this action.")]
+    NotOwner,
+    #[msg("Invalid upgrade conversion. The requested conversion is not allowed.")]
+    InvalidUpgradeConversion,
 }
