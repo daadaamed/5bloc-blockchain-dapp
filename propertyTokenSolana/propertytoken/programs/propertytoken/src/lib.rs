@@ -51,39 +51,39 @@ pub mod propertytoken {
         Ok(())
     }
 
-    // // échange une propriété entre l'expéditeur et le destinataire
-    // pub fn exchange_property(ctx: Context<ExchangeProperty>) -> Result<()> {
-    //     let clock = Clock::get()?.unix_timestamp;
-    //     let sender = &mut ctx.accounts.sender;
-    //     let receiver = &mut ctx.accounts.receiver;
-    //     let property_account = &mut ctx.accounts.property;
+    // échange une propriété entre l'expéditeur et le destinataire
+    pub fn exchange_property(ctx: Context<ExchangeProperty>) -> Result<()> {
+        let clock = Clock::get()?.unix_timestamp;
+        let sender = &mut ctx.accounts.sender;
+        let receiver = &mut ctx.accounts.receiver;
+        let property_account = &mut ctx.accounts.property;
 
-    //     // vérifie que le destinataire ne dépasse pas la limite de propriétés
-    //     if receiver.properties.len() >= 4 {
-    //         return Err(ErrorCode::MaxPropertiesReached.into());
-    //     }
+        // vérifie que le destinataire ne dépasse pas la limite de propriétés
+        if receiver.properties.len() >= 4 {
+            return Err(ErrorCode::MaxPropertiesReached.into());
+        }
 
-    //     // Extract property public key.
-    //     let property_pubkey = property_account.key();
+        // Extract property public key.
+        let property_pubkey = property_account.key();
 
-    //     // Save current owner into a local variable.
-    //     let current_owner = property_account.owner;
+        // Save current owner into a local variable.
+        let current_owner = property_account.owner;
 
-    //     // Update property details.
-    //     property_account.previous_owners.push(current_owner);
-    //     property_account.owner = ctx.accounts.receiver_signer.key();
-    //     property_account.last_transfer_at = clock;
+        // Update property details.
+        property_account.previous_owners.push(current_owner);
+        property_account.owner = ctx.accounts.receiver_signer.key();
+        property_account.last_transfer_at = clock;
 
-    //     // Update the sender's and receiver's property lists.
-    //     sender.properties.retain(|&x| x != property_pubkey);
-    //     receiver.properties.push(property_pubkey);
+        // Update the sender's and receiver's property lists.
+        sender.properties.retain(|&x| x != property_pubkey);
+        receiver.properties.push(property_pubkey);
 
-    //     // Update transaction timestamps.
-    //     sender.last_transaction = clock;
-    //     receiver.last_transaction = clock;
+        // Update transaction timestamps.
+        sender.last_transaction = clock;
+        receiver.last_transaction = clock;
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
