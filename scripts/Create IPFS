@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+contract IPFSStorage {
+    // Mapping pour stocker le CID IPFS de chaque utilisateur
+    mapping(address => string) private userCID;
+
+    // Événement déclenché lorsqu’un CID est stocké
+    event CIDStored(address indexed user, string cid);
+
+    /**
+     * @dev Stocke un CID IPFS pour l’utilisateur appelant
+     * @param _cid CID IPFS du fichier
+     */
+    function storeCID(string memory _cid) public {
+        userCID[msg.sender] = _cid;
+        emit CIDStored(msg.sender, _cid);
+    }
+
+    /**
+     * @dev Récupère le CID IPFS associé à une adresse Ethereum
+     * @param _user Adresse Ethereum de l’utilisateur
+     * @return CID IPFS stocké
+     */
+    function getCID(address _user) public view returns (string memory) {
+        return userCID[_user];
+    }
+}
