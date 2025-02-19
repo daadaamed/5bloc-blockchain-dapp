@@ -23,7 +23,11 @@ contract PropertyToken {
 
     // Time constraints (in seconds)
     uint256 constant COOLDOWN_PERIOD = 300; // 5 minutes for transfers
-    uint256 constant LOCK_PERIOD = 600;     // 10 minutes for critical actions (minting)
+    uint256 constant LOCK_PERIOD = 600;     // 10 minutes for minting
+
+    // Testing environement time constraints 
+    uint256 constant TEST_COOLDOWN_PERIOD = 5; // 5 seconds for transfers
+    uint256 constant TEST_LOCK_PERIOD = 10;     // 10 seconds for minting
 
     // Mapping from property ID to Property details
     mapping(uint256 => Property) public properties;
@@ -143,6 +147,10 @@ contract PropertyToken {
             block.timestamp >= nextAllowedTxTime[_receiver],
             "Receiver cooldown active: The receiver must wait before receiving a new property."
         );
+
+        // Check that receiver is valid and not the sender.
+        require(_receiver != address(0), "Invalid receiver address.");
+        require(_receiver != msg.sender, "Cannot transfer property to yourself.");
         
         Property storage property = properties[_propertyId];
         require(property.owner == msg.sender, "NotOwner: Only the property owner can transfer it.");
