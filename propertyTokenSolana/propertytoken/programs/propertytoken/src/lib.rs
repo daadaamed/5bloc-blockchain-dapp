@@ -12,11 +12,19 @@ const COOLDOWN_PERIOD: i64 = 300; // 5 minutes for production
 #[cfg(not(feature = "test-mode"))]
 const LOCK_PERIOD: i64 = 600; // 10 minutes for production
 
+// Enum for property types.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
+pub enum PropertyType {
+    Residential,
+    Commercial,
+    Luxury,
+}
+
 #[program]
 pub mod propertytoken {
     use super::*;
 
-    // initialise un nouveau compte utilisateur
+    // Initialize a new user account.
     pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()> {
         let user_account = &mut ctx.accounts.user;
         user_account.properties = Vec::new();
@@ -24,12 +32,12 @@ pub mod propertytoken {
         Ok(())
     }
 
-    // crée un nouveau token de propriété
+    // Mint a new property token.
     pub fn mint_property(ctx: Context<MintProperty>, metadata: Metadata) -> Result<()> {
         let clock = Clock::get()?.unix_timestamp;
         let user_account = &mut ctx.accounts.user;
 
-        // vérifie la limite maximale de propriétés (4 propriétés maximum)
+        // Check maximum property limit (max 4 properties).
         if user_account.properties.len() >= 4 {
             return Err(ErrorCode::MaxPropertiesReached.into());
         }
@@ -39,10 +47,10 @@ pub mod propertytoken {
             return Err(ErrorCode::NormalCooldownActive.into());
         }
 
-        // initialise le compte de propriété
+        // Initialize the property account.
         let property_account = &mut ctx.accounts.property;
         property_account.owner = ctx.accounts.user_signer.key();
-        property_account.metadata = metadata.clone();
+        property_account.metadata = metadata.clone(); // metadata includes property_type
         property_account.created_at = clock;
         property_account.last_transfer_at = clock;
         property_account.previous_owners = Vec::new();
@@ -50,25 +58,25 @@ pub mod propertytoken {
         // Add the property to the user's list.
         user_account.properties.push(property_account.key());
 
-        // Update the user's transaction timestamps.
+        // Update the user's last transaction timestamp.
         user_account.last_transaction = clock;
 
         Ok(())
     }
 
-    // échange une propriété entre l'expéditeur et le destinataire
+    // Transfer a property from sender to receiver.
     pub fn exchange_property(ctx: Context<ExchangeProperty>) -> Result<()> {
         let clock = Clock::get()?.unix_timestamp;
         let sender = &mut ctx.accounts.sender;
         let receiver = &mut ctx.accounts.receiver;
         let property_account = &mut ctx.accounts.property;
 
-        // Only allow the property owner to initiate a transfer.
+        // Ensure the property owner is initiating the transfer.
         if property_account.owner != ctx.accounts.sender_signer.key() {
             return Err(ErrorCode::NotOwner.into());
         }
 
-        // vérifie que le destinataire ne dépasse pas la limite de propriétés
+        // Check that the receiver does not already have 4 properties.
         if receiver.properties.len() >= 4 {
             return Err(ErrorCode::MaxPropertiesReached.into());
         }
@@ -78,10 +86,7 @@ pub mod propertytoken {
             return Err(ErrorCode::NormalCooldownActive.into());
         }
 
-        // Extract property public key.
-        let property_pubkey = property_account.key();
-
-        // Save current owner into a local variable.
+        // Save current owner.
         let current_owner = property_account.owner;
 
         // Update property details.
@@ -89,7 +94,8 @@ pub mod propertytoken {
         property_account.owner = ctx.accounts.receiver_signer.key();
         property_account.last_transfer_at = clock;
 
-        // Update the sender's and receiver's property lists.
+        // Update sender's and receiver's property lists.
+        let property_pubkey = property_account.key();
         sender.properties.retain(|&x| x != property_pubkey);
         receiver.properties.push(property_pubkey);
 
@@ -100,8 +106,8 @@ pub mod propertytoken {
         Ok(())
     }
 
-    // upgrade a property to a higher category based on conversion multipliers
-    pub fn upgrade_property(ctx: Context<UpgradeProperty>, new_property_type: String) -> Result<()> {
+    // Upgrade a property to a higher category based on conversion multipliers.
+    pub fn upgrade_property(ctx: Context<UpgradeProperty>, new_property_type: PropertyType) -> Result<()> {
         let clock = Clock::get()?.unix_timestamp;
         let user_account = &mut ctx.accounts.user;
         let property_account = &mut ctx.accounts.property;
@@ -111,30 +117,30 @@ pub mod propertytoken {
             return Err(ErrorCode::NormalCooldownActive.into());
         }
 
-        // Only allow the owner to upgrade.
+        // Only allow the property owner to upgrade.
         if property_account.owner != ctx.accounts.user_signer.key() {
             return Err(ErrorCode::NotOwner.into());
         }
 
-        // Get the current property type and value.
+        // Get the current property type and value from metadata.
         let current_type = property_account.metadata.property_type.clone();
         let current_value = property_account.metadata.value;
-        let multiplier: f64 = if current_type == "Residential" && new_property_type == "Commercial" {
+        let multiplier: f64 = if current_type == PropertyType::Residential && new_property_type == PropertyType::Commercial {
             1.2
-        } else if current_type == "Commercial" && new_property_type == "Luxury" {
+        } else if current_type == PropertyType::Commercial && new_property_type == PropertyType::Luxury {
             1.5
-        } else if current_type == "Residential" && new_property_type == "Luxury" {
+        } else if current_type == PropertyType::Residential && new_property_type == PropertyType::Luxury {
             1.8
         } else {
             return Err(ErrorCode::InvalidUpgradeConversion.into());
         };
 
-        // Update property details: new type and increased value.
+        // Update metadata with new type and increased value.
         property_account.metadata.property_type = new_property_type;
         property_account.metadata.value = ((current_value as f64) * multiplier) as u64;
         property_account.last_transfer_at = clock;
 
-        // Update the user's transaction timestamp.
+        // Update the user's last transaction timestamp.
         user_account.last_transaction = clock;
 
         Ok(())
@@ -195,7 +201,7 @@ pub struct User {
 }
 
 impl User {
-    // Estimated size (adjust if needed)
+    // Estimated size: 4 bytes for vector length + 4 * 32 for up to 4 Pubkeys + 8 bytes for timestamp + 1 byte for bool.
     const SIZE: usize = 4 + (4 + 4 * 32) + 8 + 1;
 }
 
@@ -209,19 +215,26 @@ pub struct Property {
 }
 
 impl Property {
+    // Updated SIZE: remove the extra byte that was for property_type.
+    // 32 for owner + Metadata::SIZE + 8 + 8 + 4 for vec length + 10 * 32 for previous owners.
     const SIZE: usize = 32 + Metadata::SIZE + 8 + 8 + 4 + (10 * 32);
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct Metadata {
     pub name: String,
-    pub property_type: String,
     pub value: u64,
     pub ipfs_hash: String,
+    pub property_type: PropertyType,
 }
 
 impl Metadata {
-    const SIZE: usize = 4 + 32 + 4 + 32 + 8 + 4 + 46;
+    // Calculate SIZE:
+    // - name: 4 bytes for length + 32 bytes maximum,
+    // - value: 8 bytes,
+    // - ipfs_hash: 4 bytes for length + 46 bytes maximum,
+    // - property_type: 1 byte.
+    const SIZE: usize = (4 + 32) + 8 + (4 + 46) + 1;
 }
 
 #[error_code]
