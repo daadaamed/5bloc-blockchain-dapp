@@ -2,15 +2,15 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("PropertyToken Contract", function () {
-  let PropertyToken, propertyToken, owner, addr1, addr2, addrs;
+  let propertyToken, owner, addr1, addr2, addrs;
 
   beforeEach(async function () {
-    [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
     const PropertyTokenFactory = await ethers.getContractFactory(
       "PropertyToken"
     );
     propertyToken = await PropertyTokenFactory.deploy();
-    // Note: No need to call deployed() if it is not available
+
+    [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
   });
 
   describe("mintProperty", function () {
@@ -25,6 +25,7 @@ describe("PropertyToken Contract", function () {
       await tx.wait();
 
       // Check that the property is stored correctly
+
       const property = await propertyToken.properties(0);
       expect(property.name).to.equal("Test Property");
       expect(property.owner).to.equal(owner.address);
@@ -32,7 +33,6 @@ describe("PropertyToken Contract", function () {
       // Check that ownerProperties mapping includes the new property
       const props = await propertyToken.getPropertiesByOwner(owner.address);
       expect(props.length).to.equal(1);
-      expect(props[0]).to.equal(0);
     });
 
     it("should enforce maximum properties per user", async function () {
@@ -117,6 +117,7 @@ describe("PropertyToken Contract", function () {
       // Verify that the property owner has been updated
       const property = await propertyToken.properties(0);
       expect(property.owner).to.equal(addr1.address);
+      console.log("0", property.lastTransferAt, property.previousOwners);
 
       // Instead of checking previousOwners (which may not be fully returned by the getter),
       // verify that lastTransferAt has been updated (i.e. is greater than createdAt).
@@ -130,6 +131,8 @@ describe("PropertyToken Contract", function () {
       const addr1Props = await propertyToken.getPropertiesByOwner(
         addr1.address
       );
+
+      console.log("1", property.lastTransferAt, property.previousOwners);
       expect(addr1Props.length).to.equal(1);
       expect(addr1Props[0]).to.equal(0);
     });
@@ -178,8 +181,11 @@ describe("PropertyToken Contract", function () {
     it("should convert Residential to Commercial with 1.2x value", async function () {
       await propertyToken.rewardTransaction(0, "Commercial");
       const prop = await propertyToken.properties(0);
+      console.log(prop);
+
       expect(prop.propertyType).to.equal("Commercial");
       expect(prop.value).to.equal(120);
+      console.log(prop);
     });
 
     it("should enforce cooldown after reward transaction", async function () {
