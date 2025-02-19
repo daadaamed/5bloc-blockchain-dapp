@@ -1,33 +1,28 @@
 const hre = require("hardhat");
-const fs = require("fs");
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
-  console.log("Minting d'une propriété par :", deployer.address);
 
-  // Charger l'adresse du contrat depuis `contractAddress.txt`
-  const contractAddress = fs.readFileSync("./contractAddress.txt", "utf-8").trim();
-  console.log("Chargement du contrat depuis :", contractAddress);
-
-  // connexion au contrat existant
+  // Deploy the contract (or connect to an already deployed instance)
   const PropertyToken = await hre.ethers.getContractFactory("PropertyToken");
-  const propertyToken = PropertyToken.attach(contractAddress);
+  const propertyToken = await PropertyToken.deploy();
+  // await propertyToken.deployed();
+  console.log("PropertyToken deployed to:", propertyToken.address);
 
-  // Mint une propriété
+  // Mint a property
   const tx = await propertyToken.mintProperty(
     "Cozy House",
     "Residential",
-    hre.ethers.utils.parseEther("1"), // Si c'est une valeur en ETH, sinon garder 1000
+    1000,
     "ipfsHash123"
   );
   await tx.wait();
-
-  console.log("Propriété mintée avec succès !");
+  console.log("Property minted successfully by", deployer.address);
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error("Erreur :", error);
+    console.error(error);
     process.exit(1);
   });
