@@ -12,9 +12,9 @@ const COOLDOWN_PERIOD: i64 = 2; // 2 seconds for testing
 const LOCK_PERIOD: i64 = 3; // 3 seconds for testing
 
 #[cfg(not(feature = "test-mode"))]
-const COOLDOWN_PERIOD: i64 = 300; // 5 minutes for production
+const COOLDOWN_PERIOD: i64 = 2; // 5 minutes for production
 #[cfg(not(feature = "test-mode"))]
-const LOCK_PERIOD: i64 = 600; // 10 minutes for production
+const LOCK_PERIOD: i64 = 3; // 10 minutes for production
 
 #[program]
 pub mod propertytoken {
@@ -25,7 +25,7 @@ pub mod propertytoken {
         let user_account = &mut ctx.accounts.user;
         user_account.properties = Vec::new();
         user_account.last_transaction = 0;
-        user_account.penalty_cooldown = false;
+        // user_account.penalty_cooldown = false;
         Ok(())
     }
 
@@ -34,12 +34,14 @@ pub mod propertytoken {
         let clock = Clock::get()?.unix_timestamp;
         let user_account = &mut ctx.accounts.user;
 
+        // Check cooldown period
+         user_account.check_cooldown(clock)?;
+
         // Vérifie la limite maximale de propriétés (4 propriétés maximum).
         if user_account.properties.len() >= 4 {
             return Err(ErrorCode::MaxPropertiesReached.into());
         }
 
-        
         // Initialise le compte de propriété.
         let property_account = &mut ctx.accounts.property;
         property_account.owner = ctx.accounts.user_signer.key();
@@ -47,7 +49,7 @@ pub mod propertytoken {
         property_account.created_at = clock;
         property_account.last_transfer_at = clock;
         property_account.previous_owners = Vec::new();
-        
+
         // Vérification  de l'IPFS hash pour valider le type de propriété.
         if metadata.ipfs_hash == IPFS_HASH_RESIDENTIAL {
             if metadata.property_type != "residential" {
@@ -91,7 +93,10 @@ pub mod propertytoken {
         if receiver.properties.len() >= 4 {
             return Err(ErrorCode::MaxPropertiesReached.into());
         }
-
+        
+        // Check cooldowns
+        sender.check_cooldown(clock)?;
+        
         // Extrait la clé publique de la propriété.
         let property_pubkey = property_account.key();
 
@@ -193,6 +198,33 @@ pub struct User {
 impl User {
     // Taille estimée.
     const SIZE: usize = 4 + (4 + 4 * 32) + 8 + 1;
+
+    fn check_cooldown(&mut self, current_time: i64) -> Result<()> {
+        let time_since_last = current_time - self.last_transaction;
+
+        // If no previous transaction, allow immediately.
+        if self.last_transaction == 0 {
+            return Ok(());
+        }
+
+        // If already in penalty mode, enforce the longer lock period.
+        if self.penalty_cooldown {
+            if time_since_last < LOCK_PERIOD {
+                return Err(ErrorCode::PenaltyCooldownActivated.into());
+            } else {
+                // Reset penalty after the lock period has passed.
+                self.penalty_cooldown = false;
+            }
+        }
+
+        // If within normal cooldown, then activate penalty mode.
+        if time_since_last < COOLDOWN_PERIOD {
+            self.penalty_cooldown = true;
+            return Err(ErrorCode::PenaltyCooldownActivated.into());
+        }
+
+        Ok(())
+    }
 }
 
 #[account]
