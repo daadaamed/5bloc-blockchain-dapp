@@ -4,15 +4,14 @@
 
 ### 1. Concept
 
-This project simulates a virtual real estate marketplace on the Solana blockchain. Each property is represented as a unique token with its own metadata (name, type, value, IPFS hash, etc.). The smart contract, developed using Rust and Anchor, enforces business rules governing how users can mint, exchange, and verify property tokens.
+This project simulates a virtual real estate marketplace on the Solana blockchain. Each property is represented as a unique token with its own metadata (name, type, value, IPFS hash, etc.). The smart contract, developed using Rust and Anchor, enforces business rules governing how users can mint, exchange, and verify property tokens. The ipfs stock is included to validate the type of a property.
 
 ### 2. Business Rules
 
 #### Minting Properties
 
 - **Action**: A user logs into the DApp and mints a new property token.
-- **Rule**: Each user can own a maximum of **4 properties**. The system checks this limit before minting.
-- **Example**: Alice mints a **Residential** property named "Cozy House" valued at 1000 units. The system stores its metadata, including timestamps for creation and last transfer.
+- **Rule**: Each user can own a maximum of **4 properties**. The system checks this limit before minting. The smart contract verifies that the provided IPFS hash matches the expected value for the declared property type. If the IPFS hash is not valid (i.e. does not match the predefined constant for that property type), the transaction is rejected.
 
 #### Transferring Properties
 
@@ -21,18 +20,23 @@ This project simulates a virtual real estate marketplace on the Solana blockchai
   - Only the **current owner** can transfer a property.
   - The receiver **must not exceed** the 4-property limit.
   - The DApp updates the owner field and maintains the property’s history.
-- **Example**: Alice transfers "Cozy House" to Bob. The DApp records the new ownership, ensuring Bob still has **4 properties or fewer**.
+  - A cooldown period is enforced after each transfer to prevent excessive transactions.
 
-#### Upgrading Properties
+#### Verifying And Reading Property Data
 
-- **Action**: Users can upgrade a property’s category through a **reward transaction**.
-- **Rule**: Property value increases based on predefined conversion multipliers:
-  - **Residential → Commercial**: **+20%** (multiplier: **1.2**)
-  - **Commercial → Luxury**: **+50%** (multiplier: **1.5**)
-  - **Residential → Luxury**: **+80%** (multiplier: **1.8**)
-- **Example**: Bob upgrades "Cozy House" (Residential) to **Commercial**. The system validates the conversion, applies the **1.2 multiplier**, and updates the property type and value accordingly.
+- **Action**: The DApp offers a function to verify property metadata and to read property token’s data.
+- **Rule**:
+  - The provided IPFS hash must exactly match one of the predefined constants for the property type(residential, commercial, or luxurious).
+  - This should serve as a decentralized certificate of authenticity for the property’s type(not fully implemented).
 
-#### Enforcing Time-Based Restrictions
+#### Reading Property Data
+
+- **Action**: Retrieve a property token’s data.
+- **Rule**:
+  - A simple read function returns the property’s owner, name, type, value, and IPFS hash.
+    **Example**: A user can view the details of a property token they own or that is publicly available.
+
+#### Enforcing Time-Based Restrictions & rules
 
 - **Rules**:
   - Users **cannot** own more than 4 properties.
@@ -52,9 +56,6 @@ This project develops a **decentralized application (DApp)** that enforces the b
 - **Smart Contracts**: Rust with **Anchor framework**
 - **Decentralized Storage**: IPFS
 - **Unit Testing**: Anchor testing framework
-- **Action:** A user can transfer a property token to another user.
-- **Business Rule:** Only the current owner can transfer a property, and the recipient must not exceed the 4-property limit. The DApp records the change by updating the owner field and appending the previous owner to the property’s history.
-- **Example:** User1 transfers her “Cozy House” token to User2. The DApp updates the property’s record, ensuring that User2's portfolio remains within the allowed limit.
 
 ### 3. Smart Contract Functions
 
@@ -62,51 +63,39 @@ This project develops a **decentralized application (DApp)** that enforces the b
 - **mint_property**: Mints a property token, ensuring the user does not exceed the 4-property limit and verifying the IPFS hash.
 - **exchange_property**: Manages property transfers, updating ownership records.
 - **verify_property_metadata**: Validates the metadata, ensuring consistency with IPFS data.
+- **get_property_datas**: A simple read-only function that retrieves and logs the details of a property (owner, name, type, value, and IPFS hash).
 
-## Installation & Configuration
+### 4. Testing
 
-````sh
-cd propertytoken
-npm install
-### Enforcing Time-Based Restrictions:
+The test suite (written in TypeScript using Anchor's testing framework) includes the following tests:
+The following tests are included:
 
-- A user Cannot posses more than 4 properties.
-- Stop transfert if receiver is in cooldown.
-- After each mint or transfer, a cooldown is applied
-- The ipfs hash determine the type of the property as a valid certificate(not fully implemented).
+crée un nouveau token de propriété:
+Mints a new property token and displays its details.
 
-# Rapport Technique : Conception et Implémentation des Contrats Solidity et des Scripts de Test
+empêche un utilisateur de posséder plus de 4 propriétés:
+Verifies that a user cannot mint more than 4 properties.
 
-## Description
+permet plusieurs transactions sans délai quand le cooldown est écoulé:
+Ensures that after the cooldown period, multiple transactions can occur.
 
-This project aims to design a decentralized application (DApp) that satisfies the business rules of a virtual real estate marketplace using blockchain technolog (as described above). This document details the design, implementation, and testing of the smart contracts developed with screenshots at the end.
+permet des échanges de propriété immédiats:
+Tests property exchange functionality and validates ownership history.
 
-## Technologies Used
+applique le cooldown normal de 5 minutes:
+Checks that a mint operation fails if attempted too soon after a previous transaction.
 
-Blockchain: Solana
-Development and Smart Contracts: Rust with the Anchor framework
-Decentralized Storage: IPFS
-Unit Testing: Anchor testing framework
+applique la pénalité de 10 minutes en cas de non-respect du cooldown:
+Verifies that transactions during a penalty period are rejected.
 
-## Main Features
+applique le cooldown de 5 minutes entre les transferts de propriétés:
+Validates that property transfers are subject to a cooldown.
 
-The smart contract has been structured into several key functions:
+vérifie la validité des métadonnées de propriété:
+Tests the metadata verification function with both valid and invalid metadata.
 
--initialize_user: Creates and initializes a new user account to manage property tokens.
--mint_property: Allows users to mint a new property token after verifying that they have not exceeded the maximum property limit. It also verifies that the provided IPFS hash matches the expected property type.
--exchange_property: Manages the secure transfer of property tokens between users, updating both the property’s ownership history and the users’ property lists.
--verify_property_metadata: Provides additional validation of property metadata, ensuring that the information (especially the IPFS hash) is consistent with the specified property type.
-
-## Test cases : name of test in anchor
-
-Creates a new ownership token : crée un nouveau token de propriété.
-Prevents a user from owning more than 4 properties : empêche un utilisateur de posséder plus de 4 propriétés.
-Allows multiple transactions without delay : permet plusieurs transactions sans délai.
-Enables instant property exchanges : permet des échanges de propriété immédiats.
-Displays transfer limits and property ownership : montre les limites de transfert et la possession de propriétés.
-Enforces the standard 5-minute cooldown : applique le cooldown normal de 5 minutes.
-Applies a 10-minute penalty for violating the cooldown : applique la pénalité de 10 minutes en cas de non-respect du cooldown.
-Enforces a 5-minute cooldown between property transfers : applique le cooldown de 5 minutes entre les transferts de propriétés.
+récupère les données d'une propriété:
+Calls the get_property_datas function to read and log property details.
 
 ## Installation and Configuration
 
@@ -115,19 +104,20 @@ Enforces a 5-minute cooldown between property transfers : applique le cooldown d
         npm i
         ```
 
-````
+```
 
 <!-- git clone https://github.com/daadaamed/5bloc-blockchain-dapp  -->
 <!-- cd propertytokenSolana/propertytoken -->
 
-````
+```
 
 Build and test:
+
 ```sh
 anchor build
 npm i
 anchor test
-````
+```
 
 Deploy:
 
@@ -138,8 +128,8 @@ anchor deploy
 
 ## Folder Structure
 
-- **programs/devoir/src/lib.rs**: Smart contract
-- **tests/devoir.ts**: Test cases
+- **programs/propoertytoken/src/lib.rs**: Smart contract
+- **tests/propoertytoken.ts**: Test cases
 - **Anchor.toml**: Anchor configuration
 
 ## Managing IPFS Locally
@@ -174,8 +164,6 @@ http://127.0.0.1:8080/ipfs/<ipfs-hash>
 
 <img width="1086" alt="Image" src="https://github.com/user-attachments/assets/9238e119-87fc-4035-9044-13f3c9ff527f" />
 
-<img width="1086" alt="Image" src="https://github.com/user-attachments/assets/b0849aad-1bb5-408c-ba86-5214d08c61d2" />
-
-<img width="1086" alt="Image" src="https://github.com/user-attachments/assets/a43b92dd-3035-4a59-818c-ccd7844d969c" />
-
 <img width="1086" alt="Image" src="https://github.com/user-attachments/assets/575fd883-4780-44cc-98bd-210b33f92e3a" />
+
+<img width="1422" alt="Image" src="https://github.com/user-attachments/assets/3317e0c0-28fd-4eca-adc7-bcfd3af43691" />

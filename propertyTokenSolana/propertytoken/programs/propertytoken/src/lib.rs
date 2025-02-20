@@ -209,7 +209,6 @@ impl User {
             if time_since_last < LOCK_PERIOD {
                 return Err(ErrorCode::PenaltyCooldownActivated.into());
             } else {
-                // Réinitialiser la pénalité après la période de verrouillage.
                 self.penalty_cooldown = false;
             }
         }
