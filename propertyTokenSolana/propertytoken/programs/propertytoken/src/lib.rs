@@ -137,8 +137,6 @@ pub mod propertytoken {
         msg!("IPFS: {}", property.metadata.ipfs_hash);
         Ok(())
     }
-}
-
     pub fn display_property_owners(ctx: Context<GetPropertyOwners>) -> Result<()> {
         let property = &ctx.accounts.property;
 
@@ -156,6 +154,9 @@ pub mod propertytoken {
         }
         Ok(())
 }
+
+}
+
 
 #[derive(Accounts)]
 pub struct InitializeUser<'info> {

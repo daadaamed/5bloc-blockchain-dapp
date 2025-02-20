@@ -600,4 +600,51 @@ describe("Propertytoken Smart Contract", () => {
       .rpc();
     console.log("✅ Données de propriété récupérées avec succès");
   });
+  it("affiche la liste des propriétaires d'une propriété", async () => {
+    // Create a new property account.
+    const propertyAccount = anchor.web3.Keypair.generate();
+    const metadata = {
+      name: "Owners Test Property",
+      propertyType: "Residential",
+      value: new anchor.BN(800000),
+      ipfsHash: APPROVED_HASH,
+    };
+
+    // Mint the property for user1.
+    await program.methods
+      .mintProperty(metadata)
+      .accounts({
+        user: user1Account.publicKey,
+        property: propertyAccount.publicKey,
+        userSigner: user1Wallet.publicKey,
+      })
+      .signers([user1Wallet, propertyAccount])
+      .rpc();
+
+    // Wait for the cooldown period to avoid penalty.
+    await sleep(3000);
+
+    // Exchange the property from user1 to user2.
+    await program.methods
+      .exchangeProperty()
+      .accounts({
+        sender: user1Account.publicKey,
+        receiver: user2Account.publicKey,
+        property: propertyAccount.publicKey,
+        senderSigner: user1Wallet.publicKey,
+        receiverSigner: user2Wallet.publicKey,
+      })
+      .signers([user1Wallet, user2Wallet])
+      .rpc();
+
+    // Call the function that displays the list of owners.
+    const tx = await program.methods
+      .displayPropertyOwners()
+      .accounts({
+        property: propertyAccount.publicKey,
+      })
+      .rpc();
+
+    console.log("✅ Affichage des propriétaires réussi, transaction:", tx);
+  });
 });
