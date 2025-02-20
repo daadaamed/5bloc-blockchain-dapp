@@ -4,7 +4,7 @@ declare_id!("DWfqXY9yuAEkU7MK2tcWxNGFqtuQyc2GMN64AmDebv8g");
 
 const IPFS_HASH_RESIDENTIAL: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";
 const IPFS_HASH_COMMERCIAL: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";  
-const IPFS_HASH_LUXIRIOUS: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";    
+const IPFS_HASH_LUXURIOUS: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";    
 
 #[cfg(feature = "test-mode")]
 const COOLDOWN_PERIOD: i64 = 2; // 2 seconds for testing
@@ -25,10 +25,11 @@ pub mod propertytoken {
         let user_account = &mut ctx.accounts.user;
         user_account.properties = Vec::new();
         user_account.last_transaction = 0;
+        user_account.penalty_cooldown = false;
         Ok(())
     }
 
-    // Crée un nouveau token de propriété avec une vérification basique d'IPFS.
+    // Crée un nouveau token de propriété
     pub fn mint_property(ctx: Context<MintProperty>, metadata: Metadata) -> Result<()> {
         let clock = Clock::get()?.unix_timestamp;
         let user_account = &mut ctx.accounts.user;
@@ -51,11 +52,11 @@ pub mod propertytoken {
             } else {
                 msg!("Commercial property IPFS hash verified.");
             }
-        } else if metadata.ipfs_hash == IPFS_HASH_LUXIRIOUS {
-            if metadata.property_type != "luxirious" {
-                msg!("Warning: The provided IPFS hash indicates an luxirious property, but the property type is '{}'.", metadata.property_type);
+        } else if metadata.ipfs_hash == IPFS_HASH_LUXURIOUS {
+            if metadata.property_type != "luxurious" {
+                msg!("Warning: The provided IPFS hash indicates an luxurious property, but the property type is '{}'.", metadata.property_type);
             } else {
-                msg!("luxirious property IPFS hash verified.");
+                msg!("luxurious property IPFS hash verified.");
             }
         } else {
             msg!("IPFS hash does not match any predefined type. Proceeding without type-specific verification.");
@@ -127,11 +128,11 @@ pub mod propertytoken {
             } else {
                 msg!("Verification succeeded: Commercial property metadata is valid.");
             }
-        } else if metadata.ipfs_hash == IPFS_HASH_LUXIRIOUS {
-            if metadata.property_type != "LIPFS_HASH_LUXIRIOUS" {
-                msg!("Verification failed: IPFS hash for LIPFS_HASH_LUXIRIOUS does not match property type: {}", metadata.property_type);
+        } else if metadata.ipfs_hash == IPFS_HASH_LUXURIOUS {
+            if metadata.property_type != "LIPFS_HASH_LUXURIOUS" {
+                msg!("Verification failed: IPFS hash for LIPFS_HASH_LUXURIOUS does not match property type: {}", metadata.property_type);
             } else {
-                msg!("Verification succeeded: LIPFS_HASH_LUXIRIOUS property metadata is valid.");
+                msg!("Verification succeeded: LIPFS_HASH_LUXURIOUS property metadata is valid.");
             }
         } else {
             msg!("Verification warning: IPFS hash not recognized. Unable to verify property metadata.");
@@ -190,7 +191,7 @@ pub struct User {
 }
 
 impl User {
-    // Taille estimée (ajuster si nécessaire).
+    // Taille estimée.
     const SIZE: usize = 4 + (4 + 4 * 32) + 8 + 1;
 }
 

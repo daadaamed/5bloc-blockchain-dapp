@@ -122,9 +122,11 @@ Enforces a 5-minute cooldown between property transfers : applique le cooldown d
 
 ````
 
-Build:
+Build and test:
 ```sh
 anchor build
+npm i
+anchor test
 ````
 
 Deploy:
@@ -132,12 +134,6 @@ Deploy:
 ```sh
 solana-test-validator
 anchor deploy
-```
-
-Run Tests:
-
-```sh
-anchor test
 ```
 
 ## Folder Structure
