@@ -26,22 +26,22 @@ In this virtual market place, users can perform these actions:
 
 ### Verify Property Metadata:
 
-- **Action:** A user or system component can check the verification of a property's metadata.
+- **Action:** A system component that checks the verification of a property's metadata.
 - **Business Rule:** The smart contract verifies that the IPFS hash provided in the metadata corresponds to the expected property type (residential, commercial, or luxurious) based on predefined hashes.
 - **Example:** When User1 submits metadata for verification, the system checks the IPFS hash against known values and logs a verification message, ensuring data integrity.
 
 ### Enforcing Time-Based Restrictions:
 
-- A user Cannot posses more than **4 propriétés**.
+- A user Cannot posses more than 4 properties.
 - Stop transfert if receiver is in cooldown.
 - After each mint or transfer, a cooldown is applied
 - The ipfs hash determine the type of the property as a valid certificate(not fully implemented).
 
-# Rapport Technique : Conception et Implémentation des Contrats Solidity et des Scripts de Test\*\*
+# Rapport Technique : Conception et Implémentation des Contrats Solidity et des Scripts de Test
 
 ## Description
 
-This project aims to design a decentralized application (DApp) that satisfies the business rules of a virtual real estate marketplace using blockchain technology. This document details the design, implementation, and testing of the smart contracts developed.
+This project aims to design a decentralized application (DApp) that satisfies the business rules of a virtual real estate marketplace using blockchain technolog (as described above). This document details the design, implementation, and testing of the smart contracts developed with screenshots at the end.
 
 ## Technologies Used
 
@@ -65,8 +65,6 @@ The smart contract has been structured into several key functions:
         cd propertytoken
         npm i
         ```
-
-or clone the repository:
 
 ```
 <!-- git clone https://github.com/daadaamed/5bloc-blockchain-dapp  -->
@@ -94,6 +92,12 @@ or clone the repository:
     ```sh
     anchor test
     ```
+
+## Folder structure
+
+- `programs/devoir/src/lib.rs`: Smart contract
+- `tests/devoir.ts`: Tests cases
+- `Anchor.toml`: Anchor Configuration
 
 ## Steps to manage ipfs locally:
 
