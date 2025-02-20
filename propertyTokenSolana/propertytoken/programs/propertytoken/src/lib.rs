@@ -39,6 +39,15 @@ pub mod propertytoken {
             return Err(ErrorCode::MaxPropertiesReached.into());
         }
 
+        
+        // Initialise le compte de propriété.
+        let property_account = &mut ctx.accounts.property;
+        property_account.owner = ctx.accounts.user_signer.key();
+        property_account.metadata = metadata.clone();
+        property_account.created_at = clock;
+        property_account.last_transfer_at = clock;
+        property_account.previous_owners = Vec::new();
+        
         // Vérification  de l'IPFS hash pour valider le type de propriété.
         if metadata.ipfs_hash == IPFS_HASH_RESIDENTIAL {
             if metadata.property_type != "residential" {
@@ -61,14 +70,6 @@ pub mod propertytoken {
         } else {
             msg!("IPFS hash does not match any predefined type. Proceeding without type-specific verification.");
         }
-
-        // Initialise le compte de propriété.
-        let property_account = &mut ctx.accounts.property;
-        property_account.owner = ctx.accounts.user_signer.key();
-        property_account.metadata = metadata.clone();
-        property_account.created_at = clock;
-        property_account.last_transfer_at = clock;
-        property_account.previous_owners = Vec::new();
 
         // Ajoute la propriété à la liste du propriétaire.
         user_account.properties.push(property_account.key());
@@ -113,7 +114,7 @@ pub mod propertytoken {
         Ok(())
     }
 
-    // Nouvelle fonction: Vérifie la validité des métadonnées de propriété.
+    // Vérifie la validité des métadonnées de propriété ( ipfs).
     pub fn verify_property_metadata(ctx: Context<VerifyPropertyMetadata>, metadata: Metadata) -> Result<()> {
         // Vérification de l'IPFS hash et du type associé.
         if metadata.ipfs_hash == IPFS_HASH_RESIDENTIAL {
@@ -176,7 +177,6 @@ pub struct ExchangeProperty<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// Pour la fonction de vérification des métadonnées, on nécessite une signature pour autoriser la vérification.
 #[derive(Accounts)]
 pub struct VerifyPropertyMetadata<'info> {
     #[account(mut)]

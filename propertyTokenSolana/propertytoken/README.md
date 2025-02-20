@@ -170,3 +170,5 @@ http://127.0.0.1:8080/ipfs/<ipfs-hash>
 
 <img width="834" alt="Image" src="https://github.com/user-attachments/assets/4240e788-d310-47e8-a434-5fcc3981b146" />
 <img width="1040" alt="Image" src="https://github.com/user-attachments/assets/8e07b2e8-7858-4983-9dbf-6e0c68d50f1b" />
+
+<img width="1040" alt="Image" src="https://github.com/user-attachments/assets/06de61ee-b96f-43db-9414-b94d0bea7a42" />
