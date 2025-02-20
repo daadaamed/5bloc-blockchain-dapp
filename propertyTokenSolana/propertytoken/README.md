@@ -95,14 +95,6 @@ or clone the repository:
     anchor test
     ```
 
-## Technologies utilisées
-
-- **Blockchain** : Ethereum
-- **Smart Contracts** : Solidity (Ethereum)
-- **Framework de développement** : Hardhat
-- **Stockage décentralisé** : IPFS
-- **Tests unitaires** : jest
-
 ## Steps to manage ipfs locally:
 
 ````sh
@@ -128,4 +120,4 @@ http://127.0.0.1:8080/ipfs/<ipfs-hash>
 - **Rodney Maglo**
 ````
 
-Screenshots from tests and deploying
+## Screenshots from tests and deploying
