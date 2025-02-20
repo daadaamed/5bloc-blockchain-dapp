@@ -139,6 +139,24 @@ pub mod propertytoken {
     }
 }
 
+    pub fn display_property_owners(ctx: Context<GetPropertyOwners>) -> Result<()> {
+        let property = &ctx.accounts.property;
+
+        // Display the current owner.
+        msg!("Current Owner: {}", property.owner);
+
+        // Check if there are any previous owners.
+        if property.previous_owners.is_empty() {
+            msg!("No previous owners.");
+        } else {
+            msg!("Previous Owners:");
+            for (i, owner) in property.previous_owners.iter().enumerate() {
+                msg!("  {}: {}", i + 1, owner);
+            }
+        }
+        Ok(())
+}
+
 #[derive(Accounts)]
 pub struct InitializeUser<'info> {
     #[account(init, payer = user_signer, space = 8 + User::SIZE)]
@@ -185,11 +203,9 @@ pub struct VerifyPropertyMetadata<'info> {
     pub user_signer: Signer<'info>,
 }
 
-#[account]
-pub struct User {
-    pub properties: Vec<Pubkey>,
-    pub last_transaction: i64,
-    pub penalty_cooldown: bool,
+#[derive(Accounts)]
+pub struct GetPropertyOwners<'info> {
+    pub property: Account<'info, Property>,
 }
 
 impl User {
