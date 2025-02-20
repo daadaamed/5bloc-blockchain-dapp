@@ -65,7 +65,7 @@ This project develops a **decentralized application (DApp)** that enforces the b
 - **verify_property_metadata**: Validates the metadata, ensuring consistency with IPFS data.
 - **get_property_datas**: A simple read-only function that retrieves and logs the details of a property (owner, name, type, value, and IPFS hash).
 
-### 4. Testing
+### 4. Testing ( test names are in french)
 
 The test suite (written in TypeScript using Anchor's testing framework) includes the following tests:
 The following tests are included:
