@@ -12,9 +12,9 @@ const COOLDOWN_PERIOD: i64 = 2; // 2 seconds for testing
 const LOCK_PERIOD: i64 = 3; // 3 seconds for testing
 
 #[cfg(not(feature = "test-mode"))]
-const COOLDOWN_PERIOD: i64 = 2; // 5 minutes for production
+const COOLDOWN_PERIOD: i64 = 2; // should be  5 minutes for production
 #[cfg(not(feature = "test-mode"))]
-const LOCK_PERIOD: i64 = 3; // 10 minutes for production
+const LOCK_PERIOD: i64 = 3; // should be 10 minutes for production
 
 #[program]
 pub mod propertytoken {
@@ -25,7 +25,7 @@ pub mod propertytoken {
         let user_account = &mut ctx.accounts.user;
         user_account.properties = Vec::new();
         user_account.last_transaction = 0;
-        // user_account.penalty_cooldown = false;
+        user_account.penalty_cooldown = false;
         Ok(())
     }
 
@@ -35,11 +35,25 @@ pub mod propertytoken {
         let user_account = &mut ctx.accounts.user;
 
         // Check cooldown period
-         user_account.check_cooldown(clock)?;
+        user_account.check_cooldown(clock)?;
 
         // Vérifie la limite maximale de propriétés (4 propriétés maximum).
         if user_account.properties.len() >= 4 {
             return Err(ErrorCode::MaxPropertiesReached.into());
+        }
+
+        // Vérification de l'IPFS hash pour valider le type de propriété.
+        // On détermine le hash attendu en fonction du type de propriété fourni.
+        let expected_hash = match metadata.property_type.to_lowercase().as_str() {
+            "residential" => IPFS_HASH_RESIDENTIAL,
+            "commercial" => IPFS_HASH_COMMERCIAL,
+            "luxurious" => IPFS_HASH_LUXURIOUS,
+            _ => return Err(ErrorCode::InvalidIpfsHash.into()),
+        };
+        if metadata.ipfs_hash != expected_hash {
+            return Err(ErrorCode::InvalidIpfsHash.into());
+        } else {
+            msg!("{} property IPFS hash verified.", metadata.property_type);
         }
 
         // Initialise le compte de propriété.
@@ -49,29 +63,6 @@ pub mod propertytoken {
         property_account.created_at = clock;
         property_account.last_transfer_at = clock;
         property_account.previous_owners = Vec::new();
-
-        // Vérification  de l'IPFS hash pour valider le type de propriété.
-        if metadata.ipfs_hash == IPFS_HASH_RESIDENTIAL {
-            if metadata.property_type != "residential" {
-                msg!("Warning: The provided IPFS hash indicates a residential property, but the property type is '{}'.", metadata.property_type);
-            } else {
-                msg!("Residential property IPFS hash verified.");
-            }
-        } else if metadata.ipfs_hash == IPFS_HASH_COMMERCIAL {
-            if metadata.property_type != "commercial" {
-                msg!("Warning: The provided IPFS hash indicates a commercial property, but the property type is '{}'.", metadata.property_type);
-            } else {
-                msg!("Commercial property IPFS hash verified.");
-            }
-        } else if metadata.ipfs_hash == IPFS_HASH_LUXURIOUS {
-            if metadata.property_type != "luxurious" {
-                msg!("Warning: The provided IPFS hash indicates an luxurious property, but the property type is '{}'.", metadata.property_type);
-            } else {
-                msg!("luxurious property IPFS hash verified.");
-            }
-        } else {
-            msg!("IPFS hash does not match any predefined type. Proceeding without type-specific verification.");
-        }
 
         // Ajoute la propriété à la liste du propriétaire.
         user_account.properties.push(property_account.key());
@@ -119,30 +110,31 @@ pub mod propertytoken {
         Ok(())
     }
 
-    // Vérifie la validité des métadonnées de propriété ( ipfs).
+    // Vérifie la validité des métadonnées de propriété (IPFS).
     pub fn verify_property_metadata(ctx: Context<VerifyPropertyMetadata>, metadata: Metadata) -> Result<()> {
-        // Vérification de l'IPFS hash et du type associé.
-        if metadata.ipfs_hash == IPFS_HASH_RESIDENTIAL {
-            if metadata.property_type != "residential" {
-                msg!("Verification failed: IPFS hash for residential does not match property type: {}", metadata.property_type);
-            } else {
-                msg!("Verification succeeded: Residential property metadata is valid.");
-            }
-        } else if metadata.ipfs_hash == IPFS_HASH_COMMERCIAL {
-            if metadata.property_type != "commercial" {
-                msg!("Verification failed: IPFS hash for commercial does not match property type: {}", metadata.property_type);
-            } else {
-                msg!("Verification succeeded: Commercial property metadata is valid.");
-            }
-        } else if metadata.ipfs_hash == IPFS_HASH_LUXURIOUS {
-            if metadata.property_type != "LIPFS_HASH_LUXURIOUS" {
-                msg!("Verification failed: IPFS hash for LIPFS_HASH_LUXURIOUS does not match property type: {}", metadata.property_type);
-            } else {
-                msg!("Verification succeeded: LIPFS_HASH_LUXURIOUS property metadata is valid.");
-            }
+        // Détermine le hash attendu en fonction du type de propriété (en ignorant la casse, min or maj).
+        let expected_hash = match metadata.property_type.to_lowercase().as_str() {
+            "residential" => IPFS_HASH_RESIDENTIAL,
+            "commercial" => IPFS_HASH_COMMERCIAL,
+            "luxurious" => IPFS_HASH_LUXURIOUS,
+            _ => return Err(ErrorCode::InvalidIpfsHash.into()),
+        };
+        if metadata.ipfs_hash != expected_hash {
+            return Err(ErrorCode::InvalidIpfsHash.into());
         } else {
-            msg!("Verification warning: IPFS hash not recognized. Unable to verify property metadata.");
+            msg!("Verification succeeded: {} property metadata is valid.", metadata.property_type);
         }
+        Ok(())
+    }
+    
+    // Récupère et affiche les données d'une propriété.
+    pub fn get_property_datas(ctx: Context<GetPropertyDatas>) -> Result<()> {
+        let property = &ctx.accounts.property;
+        msg!("Owner: {}", property.owner);
+        msg!("Name: {}", property.metadata.name);
+        msg!("Type: {}", property.metadata.property_type);
+        msg!("Value: {}", property.metadata.value);
+        msg!("IPFS: {}", property.metadata.ipfs_hash);
         Ok(())
     }
 }
@@ -183,6 +175,11 @@ pub struct ExchangeProperty<'info> {
 }
 
 #[derive(Accounts)]
+pub struct GetPropertyDatas<'info> {
+    pub property: Account<'info, Property>,
+}
+
+#[derive(Accounts)]
 pub struct VerifyPropertyMetadata<'info> {
     #[account(mut)]
     pub user_signer: Signer<'info>,
@@ -202,22 +199,22 @@ impl User {
     fn check_cooldown(&mut self, current_time: i64) -> Result<()> {
         let time_since_last = current_time - self.last_transaction;
 
-        // If no previous transaction, allow immediately.
+        // Si aucune transaction précédente, autoriser immédiatement.
         if self.last_transaction == 0 {
             return Ok(());
         }
 
-        // If already in penalty mode, enforce the longer lock period.
+        // Si déjà en mode pénalité, appliquer la période de verrouillage plus longue.
         if self.penalty_cooldown {
             if time_since_last < LOCK_PERIOD {
                 return Err(ErrorCode::PenaltyCooldownActivated.into());
             } else {
-                // Reset penalty after the lock period has passed.
+                // Réinitialiser la pénalité après la période de verrouillage.
                 self.penalty_cooldown = false;
             }
         }
 
-        // If within normal cooldown, then activate penalty mode.
+        // Si dans le cooldown normal, activer le mode pénalité.
         if time_since_last < COOLDOWN_PERIOD {
             self.penalty_cooldown = true;
             return Err(ErrorCode::PenaltyCooldownActivated.into());
@@ -264,4 +261,7 @@ pub enum ErrorCode {
     NotOwner,
     #[msg("Invalid upgrade conversion. The requested conversion is not allowed.")]
     InvalidUpgradeConversion,
+    #[msg("Invalid IPFS hash for the given property type.")]
+    InvalidIpfsHash,
 }
+

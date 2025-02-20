@@ -146,7 +146,6 @@ describe("Propertytoken Smart Contract", () => {
         .rpc();
       assert.fail("Expected error not thrown");
     } catch (error) {
-      // Now, since we've waited between mints, we expect the max properties error.
       expect(error.toString()).to.include("MaxPropertiesReached");
     }
   });
@@ -519,7 +518,6 @@ describe("Propertytoken Smart Contract", () => {
     // Wait for the cooldown period (10 seconds in test-mode).
     await sleep(10000);
 
-    // Now, the transfer should succeed.
     await program.methods
       .exchangeProperty()
       .accounts({
@@ -533,5 +531,73 @@ describe("Propertytoken Smart Contract", () => {
       .rpc();
 
     console.log("✅ Transfert réussi après le cooldown");
+  });
+  it("vérifie la validité des métadonnées de propriété", async () => {
+    // Test avec des métadonnées valides.
+    const validMetadata = {
+      name: "Verified Property",
+      propertyType: "Residential",
+      value: new anchor.BN(1000000),
+      ipfsHash: APPROVED_HASH,
+    };
+
+    // Appel de la fonction verifyPropertyMetadata.
+    await program.methods
+      .verifyPropertyMetadata(validMetadata)
+      .accounts({
+        userSigner: user1Wallet.publicKey,
+      })
+      .rpc();
+    console.log("✅ Vérification réussie pour des métadonnées valides");
+
+    // Test avec des métadonnées invalides: on utilise 'Commercial' au lieu de 'Residential'.
+    const invalidMetadata = {
+      name: "Invalid Verified Property",
+      propertyType: "Commercial",
+      value: new anchor.BN(1000000),
+      ipfsHash: APPROVED_HASH,
+    };
+
+    try {
+      await program.methods
+        .verifyPropertyMetadata(invalidMetadata)
+        .accounts({
+          userSigner: user1Wallet.publicKey,
+        })
+        .rpc();
+      assert.fail(
+        "La vérification aurait dû échouer pour des métadonnées invalides"
+      );
+    } catch (error) {
+      expect(error.toString()).to.include("Invalid IPFS hash");
+      console.log("✅ Vérification bloquée pour des métadonnées invalides");
+    }
+  });
+  it("récupère les données d'une propriété", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
+    const metadata = {
+      name: "Data Property",
+      propertyType: "Residential",
+      value: new anchor.BN(123456),
+      ipfsHash: APPROVED_HASH,
+    };
+
+    await program.methods
+      .mintProperty(metadata)
+      .accounts({
+        user: user1Account.publicKey,
+        property: propertyAccount.publicKey,
+        userSigner: user1Wallet.publicKey,
+      })
+      .signers([user1Wallet, propertyAccount])
+      .rpc();
+
+    await program.methods
+      .getPropertyDatas()
+      .accounts({
+        property: propertyAccount.publicKey,
+      })
+      .rpc();
+    console.log("✅ Données de propriété récupérées avec succès");
   });
 });
