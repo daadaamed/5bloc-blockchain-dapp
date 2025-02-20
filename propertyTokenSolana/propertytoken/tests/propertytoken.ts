@@ -1,54 +1,54 @@
-const anchor = require("@coral-xyz/anchor");
-const { web3 } = anchor;
-const BN = anchor.BN;
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
+import { assert, expect } from "chai";
+import { Propertytoken } from "../target/types/propertytoken";
+import { web3 } from "@coral-xyz/anchor";
 
 describe("Propertytoken Smart Contract", () => {
-  // Set up provider and program
   const provider = anchor.AnchorProvider.local();
   anchor.setProvider(provider);
-  const program = anchor.workspace.Propertytoken;
+  const program = anchor.workspace.Propertytoken as Program<Propertytoken>;
 
   // Generate keypairs for user wallets.
-  const user1Wallet = web3.Keypair.generate();
-  const user2Wallet = web3.Keypair.generate();
+  const user1Wallet = anchor.web3.Keypair.generate();
+  const user2Wallet = anchor.web3.Keypair.generate();
 
   // User account data (to be initialized via the program).
-  const user1Account = web3.Keypair.generate();
-  const user2Account = web3.Keypair.generate();
+  const user1Account = anchor.web3.Keypair.generate();
+  const user2Account = anchor.web3.Keypair.generate();
 
-  // Generate additional test users.
-  const user3Wallet = web3.Keypair.generate();
-  const user4Wallet = web3.Keypair.generate();
-  const user3Account = web3.Keypair.generate();
-  const user4Account = web3.Keypair.generate();
+  // Generate additional test users
+  const user3Wallet = anchor.web3.Keypair.generate();
+  const user4Wallet = anchor.web3.Keypair.generate();
+  const user3Account = anchor.web3.Keypair.generate();
+  const user4Account = anchor.web3.Keypair.generate();
 
-  // Mapping addresses to user names.
+  // Mapping des adresses aux noms d'utilisateurs pour un meilleur affichage
   const userNames = new Map();
 
-  beforeAll(async () => {
-    // Initialize user names.
+  before(async () => {
+    // Initialiser les noms d'utilisateurs
     userNames.set(user1Wallet.publicKey.toString(), "Alice");
     userNames.set(user2Wallet.publicKey.toString(), "Bob");
     userNames.set(user3Wallet.publicKey.toString(), "Charlie");
     userNames.set(user4Wallet.publicKey.toString(), "David");
 
-    // Airdrop SOL to all wallet keypairs.
+    // Airdrop SOL to all wallet keypairs
     for (const wallet of [user1Wallet, user2Wallet, user3Wallet, user4Wallet]) {
-      const airdropSig = await provider.connection.requestAirdrop(
+      const airdrop = await provider.connection.requestAirdrop(
         wallet.publicKey,
-        web3.LAMPORTS_PER_SOL * 10
+        anchor.web3.LAMPORTS_PER_SOL * 10
       );
-      await provider.connection.confirmTransaction(airdropSig);
+      await provider.connection.confirmTransaction(airdrop);
     }
 
-    // Initialize all user accounts.
-    const userPairs = [
+    // Initialize all user accounts
+    for (const [wallet, account] of [
       [user1Wallet, user1Account],
       [user2Wallet, user2Account],
       [user3Wallet, user3Account],
       [user4Wallet, user4Account],
-    ];
-    for (const [wallet, account] of userPairs) {
+    ]) {
       await program.methods
         .initializeUser()
         .accounts({
@@ -60,17 +60,17 @@ describe("Propertytoken Smart Contract", () => {
     }
   });
 
-  const getUserName = (publicKey) => {
+  const getUserName = (publicKey: string) => {
     return userNames.get(publicKey) || publicKey.slice(0, 8) + "...";
   };
 
-  test("crée un nouveau token de propriété", async () => {
-    const propertyAccount = web3.Keypair.generate();
+  it("crée un nouveau token de propriété", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
     const metadata = {
       name: "Luxury Apartment",
       propertyType: "Residential",
-      value: new BN(1000000),
-      ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+      value: new anchor.BN(1000000),
+      ipfsHash: "QmExampleHash",
     };
 
     await program.methods
@@ -83,7 +83,7 @@ describe("Propertytoken Smart Contract", () => {
       .signers([user1Wallet, propertyAccount])
       .rpc();
 
-    // Fetch and log property details.
+    // afficher les détails de la propriété
     const propertyData = await program.account.property.fetch(
       propertyAccount.publicKey
     );
@@ -95,17 +95,18 @@ describe("Propertytoken Smart Contract", () => {
     console.log(`IPFS: ${propertyData.metadata.ipfsHash}`);
   });
 
-  test("empêche un utilisateur de posséder plus de 4 propriétés", async () => {
-    // Use user3 for this test.
+  it("empêche un utilisateur de posséder plus de 4 propriétés", async () => {
+    // Use user3 for this test
     for (let i = 0; i < 4; i++) {
-      const propertyAccount = web3.Keypair.generate();
+      let propertyAccount = anchor.web3.Keypair.generate();
       const metadata = {
         name: `Property ${i + 1}`,
         propertyType: "Commercial",
-        value: new BN(500000),
-        ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+        value: new anchor.BN(500000),
+        ipfsHash: "QmExampleHash",
       };
 
+      // Mint properties without waiting
       await program.methods
         .mintProperty(metadata)
         .accounts({
@@ -117,13 +118,13 @@ describe("Propertytoken Smart Contract", () => {
         .rpc();
     }
 
-    // Attempt to mint a 5th property.
-    const propertyAccount = web3.Keypair.generate();
+    // Attempt to mint a 5th property
+    let propertyAccount = anchor.web3.Keypair.generate();
     const metadata = {
       name: "Property 5",
       propertyType: "Commercial",
-      value: new BN(500000),
-      ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+      value: new anchor.BN(500000),
+      ipfsHash: "QmExampleHash",
     };
 
     try {
@@ -136,22 +137,22 @@ describe("Propertytoken Smart Contract", () => {
         })
         .signers([user3Wallet, propertyAccount])
         .rpc();
-      fail("Expected error not thrown");
+      assert.fail("Expected error not thrown");
     } catch (error) {
-      expect(error.toString()).toMatch("MaxPropertiesReached");
+      expect(error.toString()).to.include("MaxPropertiesReached");
     }
   });
 
-  test("permet plusieurs transactions sans délai", async () => {
-    const propertyAccount = web3.Keypair.generate();
+  it("permet plusieurs transactions sans délai", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
     const metadata = {
       name: "Test Property",
       propertyType: "Residential",
-      value: new BN(750000),
-      ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+      value: new anchor.BN(750000),
+      ipfsHash: "QmExampleHash",
     };
 
-    // First mint.
+    // First mint
     await program.methods
       .mintProperty(metadata)
       .accounts({
@@ -162,8 +163,8 @@ describe("Propertytoken Smart Contract", () => {
       .signers([user2Wallet, propertyAccount])
       .rpc();
 
-    // Immediate second mint.
-    const propertyAccount2 = web3.Keypair.generate();
+    // Immediate second mint should now work
+    let propertyAccount2 = anchor.web3.Keypair.generate();
     await program.methods
       .mintProperty(metadata)
       .accounts({
@@ -175,16 +176,16 @@ describe("Propertytoken Smart Contract", () => {
       .rpc();
   });
 
-  test("permet des échanges de propriété immédiats", async () => {
-    const propertyAccount = web3.Keypair.generate();
+  it("permet des échanges de propriété immédiats", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
     const metadata = {
       name: "Tradeable Property",
       propertyType: "Residential",
-      value: new BN(900000),
-      ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+      value: new anchor.BN(900000),
+      ipfsHash: "QmExampleHash",
     };
 
-    // Create the property.
+    // création de la propriété
     await program.methods
       .mintProperty(metadata)
       .accounts({
@@ -204,7 +205,7 @@ describe("Propertytoken Smart Contract", () => {
       `Propriétaire: ${getUserName(propertyBefore.owner.toString())}`
     );
 
-    // Immediate exchange.
+    // échange immédiat
     await program.methods
       .exchangeProperty()
       .accounts({
@@ -231,21 +232,22 @@ describe("Propertytoken Smart Contract", () => {
     });
   });
 
-  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
-  test("montre les limites de transfert et la possession de propriétés", async () => {
-    // Use a new user for this test.
-    const testWallet = web3.Keypair.generate();
-    const testAccount = web3.Keypair.generate();
+  it("montre les limites de transfert et la possession de propriétés", async () => {
+    // Utiliser un nouvel utilisateur pour ce test
+    const testWallet = anchor.web3.Keypair.generate();
+    const testAccount = anchor.web3.Keypair.generate();
 
-    // Airdrop SOL to the new wallet.
-    const airdropSig = await provider.connection.requestAirdrop(
+    // Airdrop SOL au nouveau wallet
+    const airdrop = await provider.connection.requestAirdrop(
       testWallet.publicKey,
-      web3.LAMPORTS_PER_SOL * 10
+      anchor.web3.LAMPORTS_PER_SOL * 10
     );
-    await provider.connection.confirmTransaction(airdropSig);
+    await provider.connection.confirmTransaction(airdrop);
 
-    // Initialize the user account.
+    // Initialiser le compte utilisateur
     await program.methods
       .initializeUser()
       .accounts({
@@ -257,7 +259,7 @@ describe("Propertytoken Smart Contract", () => {
 
     console.log("\n=== Test des Limites de Transfert de Propriétés ===");
 
-    // Create 4 properties for user1 (Alice).
+    // Création de 4 propriétés pour user1 (Alice)
     const properties = [];
     const propertyNames = [
       "Villa Méditerranée",
@@ -273,12 +275,12 @@ describe("Propertytoken Smart Contract", () => {
     );
 
     for (let i = 0; i < 4; i++) {
-      const propertyAccount = web3.Keypair.generate();
+      const propertyAccount = anchor.web3.Keypair.generate();
       const metadata = {
         name: propertyNames[i],
         propertyType: "Residential",
-        value: new BN(1000000 + i * 100000),
-        ipfsHash: `QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH`,
+        value: new anchor.BN(1000000 + i * 100000),
+        ipfsHash: `QmExampleHash${i + 1}`,
       };
 
       await program.methods
@@ -304,11 +306,11 @@ describe("Propertytoken Smart Contract", () => {
         )} (${propertyData.owner.toString().slice(0, 8)}...)`
       );
 
-      // Wait 2 seconds between each creation.
+      // Attendre 2 secondes entre chaque création
       await sleep(2000);
     }
 
-    // Attempt to transfer properties to user2 (Bob).
+    // Tentative de transfert des propriétés à user2 (Bob)
     console.log(
       `\n=== Tentative de transfert de 4 propriétés à ${getUserName(
         user2Wallet.publicKey.toString()
@@ -344,21 +346,21 @@ describe("Propertytoken Smart Contract", () => {
           .slice(0, 8)}...)`
       );
 
-      // Wait 2 seconds between transfers.
+      // Attendre 2 secondes entre chaque transfert
       await sleep(2000);
     }
 
-    // Attempt to mint a 5th property.
+    // Tentative de transfert d'une 5ème propriété
     console.log(
       "\n=== Test de Sécurité: Vérification de la Limite de 4 Propriétés ==="
     );
 
-    const extraProperty = web3.Keypair.generate();
+    const extraProperty = anchor.web3.Keypair.generate();
     const extraMetadata = {
       name: "Penthouse de Luxe",
       propertyType: "Residential",
-      value: new BN(2000000),
-      ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+      value: new anchor.BN(2000000),
+      ipfsHash: "QmExampleHash5",
     };
 
     try {
@@ -371,7 +373,6 @@ describe("Propertytoken Smart Contract", () => {
         })
         .signers([user2Wallet, extraProperty])
         .rpc();
-      fail("Expected error not thrown");
     } catch (error) {
       console.log("\n✅ TEST DE SÉCURITÉ RÉUSSI ✅");
       console.log("----------------------------------------");
@@ -386,6 +387,7 @@ describe("Propertytoken Smart Contract", () => {
       console.log("----------------------------------------");
     }
 
+    // Affichage du résumé final
     console.log("\n=== Résumé Final des Propriétés ===");
     console.log(
       `\n${getUserName(
@@ -413,19 +415,19 @@ describe("Propertytoken Smart Contract", () => {
     }
   });
 
-  test("applique le cooldown normal de 5 minutes", async () => {
-    // Use a new user for this test.
-    const testWallet = web3.Keypair.generate();
-    const testAccount = web3.Keypair.generate();
+  it("applique le cooldown normal de 5 minutes", async () => {
+    // Utiliser un nouvel utilisateur pour ce test
+    const testWallet = anchor.web3.Keypair.generate();
+    const testAccount = anchor.web3.Keypair.generate();
 
-    // Airdrop SOL to the new wallet.
-    const airdropSig = await provider.connection.requestAirdrop(
+    // Airdrop SOL au nouveau wallet
+    const airdropTx = await provider.connection.requestAirdrop(
       testWallet.publicKey,
-      10 * web3.LAMPORTS_PER_SOL
+      10 * anchor.web3.LAMPORTS_PER_SOL
     );
-    await provider.connection.confirmTransaction(airdropSig);
+    await provider.connection.confirmTransaction(airdropTx);
 
-    // Initialize the user account.
+    // Initialiser le compte utilisateur
     await program.methods
       .initializeUser()
       .accounts({
@@ -435,17 +437,17 @@ describe("Propertytoken Smart Contract", () => {
       .signers([testWallet, testAccount])
       .rpc();
 
-    const propertyAccount = web3.Keypair.generate();
+    const propertyAccount = anchor.web3.Keypair.generate();
     const metadata = {
       name: "Test Cooldown Property",
       propertyType: "Residential",
-      value: new BN(500000),
-      ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+      value: new anchor.BN(500000),
+      ipfsHash: "QmExampleHash",
     };
 
     console.log("\n=== Test du Cooldown Normal (5 minutes) ===");
 
-    // First transaction.
+    // Première transaction
     await program.methods
       .mintProperty(metadata)
       .accounts({
@@ -458,11 +460,11 @@ describe("Propertytoken Smart Contract", () => {
 
     console.log("✅ Première transaction réussie");
 
-    // Wait 1 second.
-    await sleep(1000);
+    // Attendre 1 seconde
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Immediate attempt (should fail).
-    const propertyAccount2 = web3.Keypair.generate();
+    // Tentative immédiate (devrait échouer)
+    const propertyAccount2 = anchor.web3.Keypair.generate();
     try {
       await program.methods
         .mintProperty(metadata)
@@ -473,16 +475,16 @@ describe("Propertytoken Smart Contract", () => {
         })
         .signers([testWallet, propertyAccount2])
         .rpc();
-      fail("La transaction aurait dû échouer");
+      assert.fail("La transaction aurait dû échouer");
     } catch (error) {
       console.log("✅ Transaction bloquée - Cooldown normal actif");
     }
 
-    // Wait for cooldown to pass (3 seconds in test mode).
-    await sleep(3000);
+    // Attendre que le cooldown soit passé (3 secondes en mode test)
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // Transaction should now succeed.
-    const propertyAccount3 = web3.Keypair.generate();
+    // La transaction devrait maintenant réussir
+    const propertyAccount3 = anchor.web3.Keypair.generate();
     await program.methods
       .mintProperty(metadata)
       .accounts({
@@ -496,19 +498,19 @@ describe("Propertytoken Smart Contract", () => {
     console.log("✅ Transaction réussie après le cooldown");
   });
 
-  test("applique la pénalité de 10 minutes en cas de non-respect du cooldown", async () => {
-    // Use a new user for this test.
-    const testWallet = web3.Keypair.generate();
-    const testAccount = web3.Keypair.generate();
+  it("applique la pénalité de 10 minutes en cas de non-respect du cooldown", async () => {
+    // Utiliser un nouvel utilisateur pour ce test
+    const testWallet = anchor.web3.Keypair.generate();
+    const testAccount = anchor.web3.Keypair.generate();
 
-    // Airdrop SOL to the new wallet.
-    const airdropSig = await provider.connection.requestAirdrop(
+    // Airdrop SOL au nouveau wallet
+    const airdropTx = await provider.connection.requestAirdrop(
       testWallet.publicKey,
-      10 * web3.LAMPORTS_PER_SOL
+      10 * anchor.web3.LAMPORTS_PER_SOL
     );
-    await provider.connection.confirmTransaction(airdropSig);
+    await provider.connection.confirmTransaction(airdropTx);
 
-    // Initialize the user account.
+    // Initialiser le compte utilisateur
     await program.methods
       .initializeUser()
       .accounts({
@@ -518,17 +520,17 @@ describe("Propertytoken Smart Contract", () => {
       .signers([testWallet, testAccount])
       .rpc();
 
-    const propertyAccount = web3.Keypair.generate();
+    const propertyAccount = anchor.web3.Keypair.generate();
     const metadata = {
       name: "Test Penalty Property",
       propertyType: "Residential",
-      value: new BN(500000),
-      ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+      value: new anchor.BN(500000),
+      ipfsHash: "QmExampleHash",
     };
 
     console.log("\n=== Test de la Pénalité de Cooldown (10 minutes) ===");
 
-    // First transaction.
+    // Première transaction
     await program.methods
       .mintProperty(metadata)
       .accounts({
@@ -541,8 +543,8 @@ describe("Propertytoken Smart Contract", () => {
 
     console.log("✅ Première transaction réussie");
 
-    // Immediate attempt (should fail).
-    const propertyAccount2 = web3.Keypair.generate();
+    // Tentative pendant le cooldown (devrait échouer)
+    const propertyAccount2 = anchor.web3.Keypair.generate();
     try {
       await program.methods
         .mintProperty(metadata)
@@ -553,16 +555,16 @@ describe("Propertytoken Smart Contract", () => {
         })
         .signers([testWallet, propertyAccount2])
         .rpc();
-      fail("La transaction aurait dû échouer");
+      assert.fail("La transaction aurait dû échouer");
     } catch (error) {
       console.log("✅ Transaction bloquée - Pénalité activée");
     }
 
-    // Wait less than penalty (2 seconds).
-    await sleep(2000);
+    // Attendre moins que la pénalité (2 secondes)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Attempt during penalty (should fail).
-    const propertyAccount3 = web3.Keypair.generate();
+    // Tentative pendant la pénalité (devrait échouer)
+    const propertyAccount3 = anchor.web3.Keypair.generate();
     try {
       await program.methods
         .mintProperty(metadata)
@@ -573,16 +575,16 @@ describe("Propertytoken Smart Contract", () => {
         })
         .signers([testWallet, propertyAccount3])
         .rpc();
-      fail("La transaction aurait dû échouer");
+      assert.fail("La transaction aurait dû échouer");
     } catch (error) {
       console.log("✅ Transaction bloquée - Pénalité toujours active");
     }
 
-    // Wait until penalty passes (4 additional seconds).
-    await sleep(4000);
+    // Attendre que la pénalité soit passée (4 secondes supplémentaires)
+    await new Promise((resolve) => setTimeout(resolve, 4000));
 
-    // Transaction should now succeed.
-    const propertyAccount4 = web3.Keypair.generate();
+    // La transaction devrait maintenant réussir
+    const propertyAccount4 = anchor.web3.Keypair.generate();
     await program.methods
       .mintProperty(metadata)
       .accounts({
@@ -596,28 +598,27 @@ describe("Propertytoken Smart Contract", () => {
     console.log("✅ Transaction réussie après la pénalité");
   });
 
-  test("applique le cooldown de 5 minutes entre les transferts de propriétés", async () => {
-    // Create two new users for the test.
-    const user1WalletLocal = web3.Keypair.generate();
-    const user1AccountLocal = web3.Keypair.generate();
-    const user2WalletLocal = web3.Keypair.generate();
-    const user2AccountLocal = web3.Keypair.generate();
+  it("applique le cooldown de 5 minutes entre les transferts de propriétés", async () => {
+    // Créer deux nouveaux utilisateurs pour le test
+    const user1Wallet = anchor.web3.Keypair.generate();
+    const user1Account = anchor.web3.Keypair.generate();
+    const user2Wallet = anchor.web3.Keypair.generate();
+    const user2Account = anchor.web3.Keypair.generate();
 
-    // Airdrop SOL to wallets.
-    for (const wallet of [user1WalletLocal, user2WalletLocal]) {
-      const airdropSig = await provider.connection.requestAirdrop(
+    // Airdrop SOL aux wallets
+    for (const wallet of [user1Wallet, user2Wallet]) {
+      const airdrop = await provider.connection.requestAirdrop(
         wallet.publicKey,
-        10 * web3.LAMPORTS_PER_SOL
+        10 * anchor.web3.LAMPORTS_PER_SOL
       );
-      await provider.connection.confirmTransaction(airdropSig);
+      await provider.connection.confirmTransaction(airdrop);
     }
 
-    // Initialize user accounts.
-    const localUserPairs = [
-      [user1WalletLocal, user1AccountLocal],
-      [user2WalletLocal, user2AccountLocal],
-    ];
-    for (const [wallet, account] of localUserPairs) {
+    // Initialiser les comptes utilisateurs
+    for (const [wallet, account] of [
+      [user1Wallet, user1Account],
+      [user2Wallet, user2Account],
+    ]) {
       await program.methods
         .initializeUser()
         .accounts({
@@ -630,81 +631,76 @@ describe("Propertytoken Smart Contract", () => {
 
     console.log("\n=== Test du Cooldown entre Transferts de Propriétés ===");
 
-    // Create a property for user1.
-    const propertyAccount = web3.Keypair.generate();
+    // Créer une propriété pour user1
+    const propertyAccount = anchor.web3.Keypair.generate();
     const metadata = {
       name: "Test Transfer Property",
       propertyType: "Residential",
-      value: new BN(500000),
-      ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+      value: new anchor.BN(500000),
+      ipfsHash: "QmExampleHash",
     };
 
-    const txmint = await program.methods
+    await program.methods
       .mintProperty(metadata)
       .accounts({
-        user: user1AccountLocal.publicKey,
+        user: user1Account.publicKey,
         property: propertyAccount.publicKey,
-        userSigner: user1WalletLocal.publicKey,
+        userSigner: user1Wallet.publicKey,
       })
-      .signers([user1WalletLocal, propertyAccount])
+      .signers([user1Wallet, propertyAccount])
       .rpc();
 
     console.log("✅ Propriété créée");
-    console.log("mint transaction signature : ", txmint);
 
-    // First transfer.
-    const txtransfer = await program.methods
+    // Premier transfert
+    await program.methods
       .exchangeProperty()
       .accounts({
-        sender: user1AccountLocal.publicKey,
-        receiver: user2AccountLocal.publicKey,
+        sender: user1Account.publicKey,
+        receiver: user2Account.publicKey,
         property: propertyAccount.publicKey,
-        senderSigner: user2WalletLocal.publicKey,
-        receiverSigner: user2WalletLocal.publicKey,
+        senderSigner: user1Wallet.publicKey,
+        receiverSigner: user2Wallet.publicKey,
       })
-      .signers([user1WalletLocal, user2WalletLocal])
+      .signers([user1Wallet, user2Wallet])
       .rpc();
-    console.log("transaction signature : ", txtransfer);
+
     console.log("✅ Premier transfert réussi");
 
-    // Immediate transfer attempt (should fail).
+    // Tentative de transfert immédiat (devrait échouer)
     try {
       await program.methods
         .exchangeProperty()
         .accounts({
-          sender: user2AccountLocal.publicKey,
-          receiver: user1AccountLocal.publicKey,
+          sender: user2Account.publicKey,
+          receiver: user1Account.publicKey,
           property: propertyAccount.publicKey,
-          senderSigner: user2WalletLocal.publicKey,
-          receiverSigner: user1WalletLocal.publicKey,
+          senderSigner: user2Wallet.publicKey,
+          receiverSigner: user1Wallet.publicKey,
         })
-        .signers([user2WalletLocal, user1WalletLocal])
+        .signers([user2Wallet, user1Wallet])
         .rpc();
-      fail("Le transfert immédiat aurait dû échouer");
+      assert.fail("Le transfert immédiat aurait dû échouer");
     } catch (error) {
       console.log("✅ Transfert immédiat bloqué comme prévu (cooldown actif)");
     }
 
-    // Wait for cooldown (10 seconds in test mode).
+    // Attendre le délai de cooldown (2 secondes en mode test)
     await sleep(10000);
 
-    // The transfer should now succeed.
+    // Le transfert devrait maintenant réussir
     await program.methods
       .exchangeProperty()
       .accounts({
-        sender: user2AccountLocal.publicKey,
-        receiver: user1AccountLocal.publicKey,
+        sender: user2Account.publicKey,
+        receiver: user1Account.publicKey,
         property: propertyAccount.publicKey,
-        senderSigner: user2WalletLocal.publicKey,
-        receiverSigner: user1WalletLocal.publicKey,
+        senderSigner: user2Wallet.publicKey,
+        receiverSigner: user1Wallet.publicKey,
       })
-      .signers([user2WalletLocal, user1WalletLocal])
+      .signers([user2Wallet, user1Wallet])
       .rpc();
 
     console.log("✅ Transfert réussi après le cooldown");
   });
-});
-afterAll(async () => {
-  // Wait an extra second to allow any pending async work to complete
-  await new Promise((resolve) => setTimeout(resolve, 1000));
 });

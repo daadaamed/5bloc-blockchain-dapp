@@ -1,9 +1,10 @@
 [toolchain]
-package_manager = "yarn"
 
 [features]
-resolution = true
+seeds = false
 skip-lint = false
+[features.test-mode]
+activate = true
 
 [programs.localnet]
 propertytoken = "DWfqXY9yuAEkU7MK2tcWxNGFqtuQyc2GMN64AmDebv8g"
@@ -12,8 +13,8 @@ propertytoken = "DWfqXY9yuAEkU7MK2tcWxNGFqtuQyc2GMN64AmDebv8g"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run jest --preset ts-jest"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
