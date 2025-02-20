@@ -169,6 +169,13 @@ http://127.0.0.1:8080/ipfs/<ipfs-hash>
 ## Screenshots from tests and deploying
 
 <img width="834" alt="Image" src="https://github.com/user-attachments/assets/4240e788-d310-47e8-a434-5fcc3981b146" />
+
 <img width="1040" alt="Image" src="https://github.com/user-attachments/assets/8e07b2e8-7858-4983-9dbf-6e0c68d50f1b" />
 
-<img width="1040" alt="Image" src="https://github.com/user-attachments/assets/06de61ee-b96f-43db-9414-b94d0bea7a42" />
+<img width="1086" alt="Image" src="https://github.com/user-attachments/assets/9238e119-87fc-4035-9044-13f3c9ff527f" />
+
+<img width="1086" alt="Image" src="https://github.com/user-attachments/assets/b0849aad-1bb5-408c-ba86-5214d08c61d2" />
+
+<img width="1086" alt="Image" src="https://github.com/user-attachments/assets/a43b92dd-3035-4a59-818c-ccd7844d969c" />
+
+<img width="1086" alt="Image" src="https://github.com/user-attachments/assets/575fd883-4780-44cc-98bd-210b33f92e3a" />
