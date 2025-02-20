@@ -8,7 +8,7 @@ describe("Propertytoken Smart Contract", () => {
   anchor.setProvider(provider);
   const program = anchor.workspace.Propertytoken as Program<Propertytoken>;
 
-  // Approved IPFS hash for testing (must match your on-chain constants)
+  // Approved IPFS hash for testing
   const APPROVED_HASH = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";
 
   // Generate keypairs for user wallets.
@@ -17,7 +17,7 @@ describe("Propertytoken Smart Contract", () => {
   const user3Wallet = anchor.web3.Keypair.generate();
   const user4Wallet = anchor.web3.Keypair.generate();
 
-  // User account data (to be initialized via the program).
+  // User account data
   const user1Account = anchor.web3.Keypair.generate();
   const user2Account = anchor.web3.Keypair.generate();
   const user3Account = anchor.web3.Keypair.generate();
@@ -64,7 +64,6 @@ describe("Propertytoken Smart Contract", () => {
     return userNames.get(publicKey) || publicKey.slice(0, 8) + "...";
   };
 
-  // Helper sleep function
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
