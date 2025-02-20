@@ -134,6 +134,8 @@ anchor deploy
 
 ## Managing IPFS Locally
 
+To store your JSON metadata files on IPFS, run:
+
 ```sh
 ipfs add residential.json
 ipfs add commercial.json
@@ -160,7 +162,7 @@ http://127.0.0.1:8080/ipfs/<ipfs-hash>
 
 <img width="834" alt="Image" src="https://github.com/user-attachments/assets/4240e788-d310-47e8-a434-5fcc3981b146" />
 
-<img width="1040" alt="Image" src="https://github.com/user-attachments/assets/8e07b2e8-7858-4983-9dbf-6e0c68d50f1b" />
+<img width="1422" alt="Image" src="https://github.com/user-attachments/assets/60a66963-3b39-400c-84e9-38da133ba5d1" />
 
 <img width="1086" alt="Image" src="https://github.com/user-attachments/assets/9238e119-87fc-4035-9044-13f3c9ff527f" />
 

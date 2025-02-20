@@ -4,7 +4,7 @@ declare_id!("DWfqXY9yuAEkU7MK2tcWxNGFqtuQyc2GMN64AmDebv8g");
 // should be the one got from the cmd ````ipfs add <json-file>
 const IPFS_HASH_RESIDENTIAL: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";
 const IPFS_HASH_COMMERCIAL: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";  
-const IPFS_HASH_LUXURIOUS: &str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";    
+const IPFS_HASH_LUXURIOUS: &str = "QmPvU21VaTHmtwRKP2BPLBZ13GgM9kBw5aamwhcdSHBXMi";    
 
 #[cfg(feature = "test-mode")]
 const COOLDOWN_PERIOD: i64 = 2; // 2 seconds for testing
