@@ -208,6 +208,13 @@ pub struct GetPropertyOwners<'info> {
     pub property: Account<'info, Property>,
 }
 
+#[account]
+pub struct User {
+    pub properties: Vec<Pubkey>,
+    pub last_transaction: i64,
+    pub penalty_cooldown: bool,
+}
+
 impl User {
     // Taille estimée.
     const SIZE: usize = 4 + (4 + 4 * 32) + 8 + 1;
