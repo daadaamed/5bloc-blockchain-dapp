@@ -8,6 +8,7 @@
 ### Accès au projet :
 
 ```sh
+git clone https://github.com/daadaamed/5bloc-blockchain-dapp.git
 cd propertyTokenSolana/propertytoken
 ```
 

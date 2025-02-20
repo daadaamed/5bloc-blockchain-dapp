@@ -100,7 +100,6 @@ Calls the get_property_datas function to read and log property details.
 ## Installation and Configuration
 
         ```sh
-        cd propertytoken
         npm i
         ```
 
