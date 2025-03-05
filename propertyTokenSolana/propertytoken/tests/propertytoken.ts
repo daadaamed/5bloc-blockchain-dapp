@@ -97,6 +97,26 @@ describe("Propertytoken Smart Contract", () => {
     console.log(`Valeur: ${propertyData.metadata.value.toString()} SOL`);
     console.log(`IPFS: ${propertyData.metadata.ipfsHash}`);
   });
+  it("Échec : Un acheteur sans SOL ne peut pas acheter une propriété", async () => {
+  let buyerWithoutFunds = anchor.web3.Keypair.generate();
+
+  try {
+    await program.methods
+      .buyProperty()
+      .accounts({
+        property: propertyAccount.publicKey,
+        buyer: buyerWithoutFunds.publicKey,
+        seller: user2.publicKey, // Propriétaire actuel
+      })
+      .signers([buyerWithoutFunds])
+      .rpc();
+
+    assert.fail("Ce test aurait dû échouer !");
+  } catch (err) {
+    console.log("✅ Échec attendu : Achat impossible sans SOL !");
+  }
+});
+
 
   it("empêche un utilisateur de posséder plus de 4 propriétés", async () => {
     // Use user3 for this test.
