@@ -185,6 +185,48 @@ describe("Propertytoken Smart Contract", () => {
       .rpc();
   });
 
+  it("Échec : Une propriété déjà vendue ne peut pas être achetée à nouveau", async () => {
+  let buyer = anchor.web3.Keypair.generate();
+
+  // Simuler un acheteur avec des SOL
+  const airdropSignature = await provider.connection.requestAirdrop(
+    buyer.publicKey,
+    5_000_000_000 // 5 SOL
+  );
+  await provider.connection.confirmTransaction(airdropSignature);
+
+  // Acheter la propriété une première fois
+  await program.methods
+    .buyProperty()
+    .accounts({
+      property: propertyAccount.publicKey,
+      buyer: buyer.publicKey,
+      seller: user2.publicKey,
+    })
+    .signers([buyer])
+    .rpc();
+
+  console.log(`✅ Propriété achetée par ${buyer.publicKey.toString()} !`);
+
+  // Essayer d'acheter encore une fois
+  try {
+    await program.methods
+      .buyProperty()
+      .accounts({
+        property: propertyAccount.publicKey,
+        buyer: anchor.web3.Keypair.generate().publicKey,
+        seller: user2.publicKey,
+      })
+      .signers([buyer])
+      .rpc();
+
+    assert.fail("Ce test aurait dû échouer !");
+  } catch (err) {
+    console.log("✅ Échec attendu : Une propriété déjà vendue ne peut pas être rachetée !");
+  }
+});
+
+
   it("permet des échanges de propriété immédiats", async () => {
     const propertyAccount = anchor.web3.Keypair.generate();
     const metadata = {
