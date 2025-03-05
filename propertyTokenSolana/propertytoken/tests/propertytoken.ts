@@ -599,6 +599,21 @@ describe("Propertytoken Smart Contract", () => {
       .rpc();
     console.log("✅ Données de propriété récupérées avec succès");
   });
+  it("Met une propriété en vente", async () => {
+  const salePrice = new anchor.BN(2_000_000_000); // Prix en lamports (2 SOL)
+
+  await program.methods
+    .listPropertyForSale(salePrice)
+    .accounts({
+      property: propertyAccount.publicKey,
+      owner: user2.publicKey,
+    })
+    .signers([user2])
+    .rpc();
+
+  console.log(`✅ Propriété mise en vente à 2 SOL !`);
+});
+
   it("affiche la liste des propriétaires d'une propriété", async () => {
     // Create a new property account.
     const propertyAccount = anchor.web3.Keypair.generate();
