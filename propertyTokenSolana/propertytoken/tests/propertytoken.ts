@@ -66,6 +66,25 @@ describe("Propertytoken Smart Contract", () => {
 
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
+  it("Échec : Un utilisateur non-propriétaire ne peut pas mettre en vente une propriété", async () => {
+  const salePrice = new anchor.BN(3_000_000_000); // 3 SOL
+
+  try {
+    await program.methods
+      .listPropertyForSale(salePrice)
+      .accounts({
+        property: propertyAccount.publicKey,
+        owner: user1.publicKey, // ⚠️ Ce n'est pas le propriétaire actuel !
+      })
+      .signers([user1])
+      .rpc();
+
+    assert.fail("Ce test aurait dû échouer !");
+  } catch (err) {
+    console.log("✅ Échec attendu : Un utilisateur non-propriétaire ne peut pas mettre en vente une propriété !");
+  }
+});
+
 
   it("crée un nouveau token de propriété", async () => {
     const propertyAccount = anchor.web3.Keypair.generate();
