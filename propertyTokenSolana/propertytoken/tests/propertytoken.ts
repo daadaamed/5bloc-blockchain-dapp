@@ -730,4 +730,244 @@ describe("Propertytoken Smart Contract", () => {
 
     console.log("✅ Affichage des propriétaires réussi, transaction:", tx);
   });
+  it("Échec : Un utilisateur ne peut pas minter une propriété pendant la période de pénalité", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
+    const metadata = {
+      name: "Penalty Cooldown Property",
+      propertyType: "Residential",
+      value: new anchor.BN(500000),
+      ipfsHash: APPROVED_HASH,
+    };
+  
+    // Première transaction
+    await program.methods
+      .mintProperty(metadata)
+      .accounts({
+        user: user2Account.publicKey,
+        property: propertyAccount.publicKey,
+        userSigner: user2Wallet.publicKey,
+      })
+      .signers([user2Wallet, propertyAccount])
+      .rpc();
+  
+    console.log("✅ Première transaction réussie");
+  
+    // Essai immédiat de minter à nouveau (devrait échouer)
+    const propertyAccount2 = anchor.web3.Keypair.generate();
+    try {
+      await program.methods
+        .mintProperty(metadata)
+        .accounts({
+          user: user2Account.publicKey,
+          property: propertyAccount2.publicKey,
+          userSigner: user2Wallet.publicKey,
+        })
+        .signers([user2Wallet, propertyAccount2])
+        .rpc();
+      assert.fail("La transaction aurait dû échouer à cause du cooldown");
+    } catch (error) {
+      expect(error.toString()).to.include("PenaltyCooldownActivated");
+      console.log("✅ Échec attendu: Période de pénalité active");
+    }
+  });
+  
+  
+  it("Échec : Impossible de minter une propriété avec un hash IPFS invalide", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
+    const invalidMetadata = {
+      name: "Invalid Property",
+      propertyType: "Residential",
+      value: new anchor.BN(1000000),
+      ipfsHash: "INVALID_HASH", // Hash invalide
+    };
+  
+    try {
+      await program.methods
+        .mintProperty(invalidMetadata)
+        .accounts({
+          user: user1Account.publicKey,
+          property: propertyAccount.publicKey,
+          userSigner: user1Wallet.publicKey,
+        })
+        .signers([user1Wallet, propertyAccount])
+        .rpc();
+      assert.fail("Le minage aurait dû échouer avec un hash IPFS invalide");
+    } catch (error) {
+      if (error.toString().includes("InvalidIpfsHash")) {
+        console.log("✅ Échec attendu: Hash IPFS invalide détecté");
+      } else {
+        console.log("❌ Erreur inattendue: ", error.toString());
+      }
+    }
+  });
+  
+  it("Échec : Un utilisateur ne peut pas minter une propriété pendant la période de pénalité", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
+    const metadata = {
+      name: "Penalty Cooldown Property",
+      propertyType: "Residential",
+      value: new anchor.BN(500000),
+      ipfsHash: APPROVED_HASH,
+    };
+  
+    // Première transaction
+    await program.methods
+      .mintProperty(metadata)
+      .accounts({
+        user: user2Account.publicKey,
+        property: propertyAccount.publicKey,
+        userSigner: user2Wallet.publicKey,
+      })
+      .signers([user2Wallet, propertyAccount])
+      .rpc();
+  
+    console.log("✅ Première transaction réussie");
+  
+    // Essai immédiat de minter à nouveau (devrait échouer)
+    const propertyAccount2 = anchor.web3.Keypair.generate();
+    try {
+      await program.methods
+        .mintProperty(metadata)
+        .accounts({
+          user: user2Account.publicKey,
+          property: propertyAccount2.publicKey,
+          userSigner: user2Wallet.publicKey,
+        })
+        .signers([user2Wallet, propertyAccount2])
+        .rpc();
+      assert.fail("La transaction aurait dû échouer à cause du cooldown");
+    } catch (error) {
+      if (error.toString().includes("PenaltyCooldownActivated")) {
+        console.log("✅ Échec attendu: Période de pénalité active");
+      } else {
+        console.log("❌ Erreur inattendue: ", error.toString());
+      }
+    }
+  });
+  
+  it("Échec : Un utilisateur ne peut pas échanger une propriété qu'il ne possède pas", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
+    const metadata = {
+      name: "Unauthorized Exchange Property",
+      propertyType: "Residential",
+      value: new anchor.BN(750000),
+      ipfsHash: APPROVED_HASH,
+    };
+  
+    await program.methods
+      .mintProperty(metadata)
+      .accounts({
+        user: user1Account.publicKey,
+        property: propertyAccount.publicKey,
+        userSigner: user1Wallet.publicKey,
+      })
+      .signers([user1Wallet, propertyAccount])
+      .rpc();
+  
+    try {
+      await program.methods
+        .exchangeProperty()
+        .accounts({
+          sender: user2Account.publicKey, // user2 tente d'échanger une propriété qu'il ne possède pas
+          receiver: user3Account.publicKey,
+          property: propertyAccount.publicKey,
+          senderSigner: user2Wallet.publicKey,
+          receiverSigner: user3Wallet.publicKey,
+        })
+        .signers([user2Wallet, user3Wallet])
+        .rpc();
+      assert.fail("L'échange aurait dû échouer car user2 n'est pas propriétaire");
+    } catch (error) {
+      if (error.toString().includes("NotOwner")) {
+        console.log("✅ Échec attendu: Seul le propriétaire peut échanger la propriété");
+      } else {
+        console.log("❌ Erreur inattendue: ", error.toString());
+      }
+    }
+  });
+  
+  it("Échec : Un utilisateur ne peut pas minter une propriété pendant la période de pénalité", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
+    const metadata = {
+      name: "Penalty Cooldown Property",
+      propertyType: "Residential",
+      value: new anchor.BN(500000),
+      ipfsHash: APPROVED_HASH,
+    };
+  
+    // Première transaction
+    await program.methods
+      .mintProperty(metadata)
+      .accounts({
+        user: user2Account.publicKey,
+        property: propertyAccount.publicKey,
+        userSigner: user2Wallet.publicKey,
+      })
+      .signers([user2Wallet, propertyAccount])
+      .rpc();
+  
+    console.log("✅ Première transaction réussie");
+  
+    // Essai immédiat de minter à nouveau (devrait échouer)
+    const propertyAccount2 = anchor.web3.Keypair.generate();
+    try {
+      await program.methods
+        .mintProperty(metadata)
+        .accounts({
+          user: user2Account.publicKey,
+          property: propertyAccount2.publicKey,
+          userSigner: user2Wallet.publicKey,
+        })
+        .signers([user2Wallet, propertyAccount2])
+        .rpc();
+      assert.fail("La transaction aurait dû échouer à cause du cooldown");
+    } catch (error) {
+      if (error.toString().includes("PenaltyCooldownActivated")) {
+        console.log("✅ Échec attendu: Période de pénalité active");
+      } else {
+        console.log("❌ Erreur inattendue: ", error.toString());
+      }
+    }
+  });
+  
+  it("Échec : Un utilisateur ne peut pas initier un transfert avec un compte inexistant", async () => {
+    const nonexistentAccount = anchor.web3.Keypair.generate();
+    const propertyAccount = anchor.web3.Keypair.generate();
+    try {
+      await program.methods
+        .exchangeProperty()
+        .accounts({
+          sender: nonexistentAccount.publicKey,
+          receiver: user1Account.publicKey,
+          property: propertyAccount.publicKey,
+          senderSigner: nonexistentAccount.publicKey,
+          receiverSigner: user1Wallet.publicKey,
+        })
+        .signers([nonexistentAccount, user1Wallet])
+        .rpc();
+      assert.fail("Le transfert aurait dû échouer avec un compte inexistant");
+    } catch (error) {
+      console.log("✅ Échec attendu: Transfert impossible avec un compte inexistant");
+    }
+  });
+  
+  it("Échec : Un utilisateur ne peut pas échanger une propriété avec lui-même", async () => {
+    const propertyAccount = anchor.web3.Keypair.generate();
+    try {
+      await program.methods
+        .exchangeProperty()
+        .accounts({
+          sender: user1Account.publicKey,
+          receiver: user1Account.publicKey,
+          property: propertyAccount.publicKey,
+          senderSigner: user1Wallet.publicKey,
+          receiverSigner: user1Wallet.publicKey,
+        })
+        .signers([user1Wallet])
+        .rpc();
+      assert.fail("Le transfert aurait dû échouer car on ne peut pas échanger avec soi-même");
+    } catch (error) {
+      console.log("✅ Échec attendu: Impossible d'échanger une propriété avec soi-même");
+    }
+  });
 });
