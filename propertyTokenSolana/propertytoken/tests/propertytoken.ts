@@ -84,6 +84,19 @@ describe("Propertytoken Smart Contract", () => {
     console.log("✅ Échec attendu : Un utilisateur non-propriétaire ne peut pas mettre en vente une propriété !");
   }
 });
+  it("Initialise un utilisateur", async () => {
+  await program.methods
+    .initializeUser()
+    .accounts({
+      user: user1.publicKey,
+      userSigner: provider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers([user1])
+    .rpc();
+
+  console.log("✅ Utilisateur initialisé :", user1.publicKey.toString());
+});
 
 
   it("crée un nouveau token de propriété", async () => {
