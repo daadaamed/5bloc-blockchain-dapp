@@ -368,6 +368,29 @@ describe("Propertytoken Smart Contract", () => {
 
     console.log("✅ Transaction réussie après le cooldown");
   });
+  it("Acheter une propriété", async () => {
+  let seller = user2.publicKey;
+  let buyer = anchor.web3.Keypair.generate();
+
+  // Envoyer des SOL au buyer (simulateur)
+  const airdropSignature = await provider.connection.requestAirdrop(
+    buyer.publicKey,
+    5_000_000_000 // 5 SOL
+  );
+  await provider.connection.confirmTransaction(airdropSignature);
+
+  await program.methods
+    .buyProperty()
+    .accounts({
+      property: propertyAccount.publicKey,
+      buyer: buyer.publicKey,
+      seller: seller,
+    })
+    .signers([buyer])
+    .rpc();
+
+  console.log(`Propriété achetée par ${buyer.publicKey.toString()} !`);
+});
 
   it("applique la pénalité de 10 minutes en cas de non-respect du cooldown", async () => {
     // Use a new user for this test.
