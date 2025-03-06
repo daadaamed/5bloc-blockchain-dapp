@@ -84,6 +84,28 @@ describe("Propertytoken Smart Contract", () => {
     console.log("✅ Échec attendu : Un utilisateur non-propriétaire ne peut pas mettre en vente une propriété !");
   }
 });
+  it("Mint une nouvelle propriété", async () => {
+  const metadata = {
+    name: "Luxury Villa",
+    propertyType: "Residential",
+    value: new anchor.BN(500000),
+    ipfsHash: "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH", // IPFS valide
+  };
+
+  await program.methods
+    .mintProperty(metadata)
+    .accounts({
+      user: user1.publicKey,
+      property: propertyAccount1.publicKey,
+      userSigner: provider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    })
+    .signers([user1, propertyAccount1])
+    .rpc();
+
+  console.log("✅ Propriété mintée :", propertyAccount1.publicKey.toString());
+});
+
 
 
   it("crée un nouveau token de propriété", async () => {
